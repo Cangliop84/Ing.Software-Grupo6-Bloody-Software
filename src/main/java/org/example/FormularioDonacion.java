@@ -2,6 +2,8 @@ package org.example;
 
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 
 public class FormularioDonacion extends JFrame {
@@ -11,11 +13,13 @@ public class FormularioDonacion extends JFrame {
     private JLabel lblErrorVolumen;
     private JLabel lblMensajeEstado;
     private JButton btnGuardar;
+    private JButton btnLimpiar;
     private Border bordePorDefecto;
+    private final Border bordeError = BorderFactory.createLineBorder(Color.RED, 2);
 
     public FormularioDonacion() {
-        setTitle("Formulario de Donaciones");
-        setSize(450, 300);
+        setTitle("Formulario de Donaciones - Banco de Sangre");
+        setSize(480, 330);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -82,18 +86,23 @@ public class FormularioDonacion extends JFrame {
 
         panelPrincipal.add(panelFormulario, BorderLayout.CENTER);
 
-        // Panel inferior: Mensaje de estado y botón Guardar
+        // Panel inferior: Mensaje de estado y botones Limpiar / Guardar
         JPanel panelInferior = new JPanel(new BorderLayout(5, 8));
         lblMensajeEstado = new JLabel(" ", SwingConstants.CENTER);
         lblMensajeEstado.setForeground(Color.RED);
         lblMensajeEstado.setFont(new Font("SansSerif", Font.BOLD, 12));
         panelInferior.add(lblMensajeEstado, BorderLayout.NORTH);
 
-        JPanel panelBoton = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        btnLimpiar = new JButton("Limpiar");
+        btnLimpiar.setPreferredSize(new Dimension(100, 32));
+
         btnGuardar = new JButton("Guardar");
         btnGuardar.setPreferredSize(new Dimension(110, 32));
-        panelBoton.add(btnGuardar);
-        panelInferior.add(panelBoton, BorderLayout.SOUTH);
+
+        panelBotones.add(btnLimpiar);
+        panelBotones.add(btnGuardar);
+        panelInferior.add(panelBotones, BorderLayout.SOUTH);
 
         panelPrincipal.add(panelInferior, BorderLayout.SOUTH);
 
@@ -102,10 +111,119 @@ public class FormularioDonacion extends JFrame {
 
     private void configurarEventos() {
         btnGuardar.addActionListener(e -> procesarGuardado());
+        btnLimpiar.addActionListener(e -> limpiarFormulario());
+
+        agregarListenerLimpiezaError(txtNombreDonante, lblErrorNombre);
+        agregarListenerLimpiezaError(txtVolumenMl, lblErrorVolumen);
+    }
+
+    private void agregarListenerLimpiezaError(JTextField campo, JLabel etiquetaError) {
+        campo.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                restaurarEstadoCampo(campo, etiquetaError);
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                restaurarEstadoCampo(campo, etiquetaError);
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                restaurarEstadoCampo(campo, etiquetaError);
+            }
+        });
+    }
+
+    private void restaurarEstadoCampo(JTextField campo, JLabel etiquetaError) {
+        if (!campo.getText().trim().isEmpty()) {
+            campo.setBorder(bordePorDefecto);
+            etiquetaError.setVisible(false);
+            if (!lblErrorNombre.isVisible() && !lblErrorVolumen.isVisible()) {
+                lblMensajeEstado.setText(" ");
+            }
+        }
     }
 
     private void procesarGuardado() {
-        // Pendiente: lógica de validación de entradas vacías en el próximo avance
+        if (!validarCamposVacios()) {
+            return;
+        }
+        if (!validarFormatoVolumen()) {
+            return;
+        }
+
+        lblMensajeEstado.setForeground(new Color(0, 128, 0));
+        lblMensajeEstado.setText("Datos validados correctamente.");
+        // Pendiente en próximo avance: integrar con CalculadoraCaducidad y
+        // Donacion.guardarEnMongo()
+    }
+
+    public boolean validarCamposVacios() {
+        boolean esValido = true;
+
+        if (txtNombreDonante.getText().trim().isEmpty()) {
+            marcarCampoConError(txtNombreDonante, lblErrorNombre, "Información obligatoria");
+            esValido = false;
+        } else {
+            txtNombreDonante.setBorder(bordePorDefecto);
+            lblErrorNombre.setVisible(false);
+        }
+
+        if (txtVolumenMl.getText().trim().isEmpty()) {
+            marcarCampoConError(txtVolumenMl, lblErrorVolumen, "Información obligatoria");
+            esValido = false;
+        } else {
+            txtVolumenMl.setBorder(bordePorDefecto);
+            lblErrorVolumen.setVisible(false);
+        }
+
+        if (!esValido) {
+            lblMensajeEstado.setForeground(Color.RED);
+            lblMensajeEstado.setText("Complete la información obligatoria marcada en rojo.");
+        } else {
+            lblMensajeEstado.setText(" ");
+        }
+
+        return esValido;
+    }
+
+    public boolean validarFormatoVolumen() {
+        String textoVolumen = txtVolumenMl.getText().trim();
+        try {
+            int volumen = Integer.parseInt(textoVolumen);
+            if (volumen <= 0) {
+                marcarCampoConError(txtVolumenMl, lblErrorVolumen, "El volumen debe ser mayor a 0 ml");
+                lblMensajeEstado.setForeground(Color.RED);
+                lblMensajeEstado.setText("Corrija el volumen ingresado.");
+                return false;
+            }
+            txtVolumenMl.setBorder(bordePorDefecto);
+            lblErrorVolumen.setVisible(false);
+            return true;
+        } catch (NumberFormatException ex) {
+            marcarCampoConError(txtVolumenMl, lblErrorVolumen, "Ingrese un valor numérico válido");
+            lblMensajeEstado.setForeground(Color.RED);
+            lblMensajeEstado.setText("El volumen debe ser un número entero.");
+            return false;
+        }
+    }
+
+    private void marcarCampoConError(JTextField campo, JLabel etiquetaError, String mensaje) {
+        campo.setBorder(bordeError);
+        etiquetaError.setText(mensaje);
+        etiquetaError.setVisible(true);
+    }
+
+    public void limpiarFormulario() {
+        txtNombreDonante.setText("");
+        txtVolumenMl.setText("");
+        txtNombreDonante.setBorder(bordePorDefecto);
+        txtVolumenMl.setBorder(bordePorDefecto);
+        lblErrorNombre.setVisible(false);
+        lblErrorVolumen.setVisible(false);
+        lblMensajeEstado.setText(" ");
     }
 
     public JTextField getTxtNombreDonante() {
@@ -132,7 +250,15 @@ public class FormularioDonacion extends JFrame {
         return btnGuardar;
     }
 
+    public JButton getBtnLimpiar() {
+        return btnLimpiar;
+    }
+
     public Border getBordePorDefecto() {
         return bordePorDefecto;
+    }
+
+    public Border getBordeError() {
+        return bordeError;
     }
 }
