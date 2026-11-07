@@ -5,6 +5,7 @@ import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.time.LocalDate;
 
 public class FormularioDonacion extends JFrame {
     private JTextField txtNombreDonante;
@@ -150,14 +151,32 @@ public class FormularioDonacion extends JFrame {
         if (!validarCamposVacios()) {
             return;
         }
+
         if (!validarFormatoVolumen()) {
             return;
         }
 
-        lblMensajeEstado.setForeground(new Color(0, 128, 0));
-        lblMensajeEstado.setText("Datos validados correctamente.");
-        // Pendiente en próximo avance: integrar con CalculadoraCaducidad y
-        // Donacion.guardarEnMongo()
+        String nombre = txtNombreDonante.getText().trim();
+        int volumen = Integer.parseInt(txtVolumenMl.getText().trim());
+
+        LocalDate fechaHoy = LocalDate.now();
+        LocalDate fechaCaducidad = CalculadoraCaducidad.calcularFechaCaducidad(fechaHoy);
+
+        try {
+            Donacion donacion = new Donacion(nombre, volumen, fechaCaducidad);
+            donacion.guardarEnMongo();
+
+            lblMensajeEstado.setForeground(new Color(0, 128, 0));
+            lblMensajeEstado.setText("¡Donación registrada y guardada con éxito!");
+
+            txtNombreDonante.setText("");
+            txtVolumenMl.setText("");
+
+        } catch (Exception ex) {
+            lblMensajeEstado.setForeground(Color.RED);
+            lblMensajeEstado.setText("Error al guardar la donación en la base de datos.");
+            ex.printStackTrace();
+        }
     }
 
     public boolean validarCamposVacios() {
