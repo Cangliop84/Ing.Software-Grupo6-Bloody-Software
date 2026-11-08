@@ -7,6 +7,11 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.time.LocalDate;
 
+/**
+ * Vista gráfica principal para el registro de donaciones de sangre (Tarea T02 - US01).
+ * Permite ingresar los datos del donante y el volumen extraído (ml), validando
+ * entradas obligatorias y formato numérico antes de registrar la donación.
+ */
 public class FormularioDonacion extends JFrame {
     private JTextField txtNombreDonante;
     private JTextField txtVolumenMl;
@@ -19,6 +24,9 @@ public class FormularioDonacion extends JFrame {
     private Border bordePorDefecto;
     private final Border bordeError = BorderFactory.createLineBorder(Color.RED, 2);
 
+    /**
+     * Construye e inicializa la ventana del formulario de donaciones.
+     */
     public FormularioDonacion() {
         setTitle("Formulario de Donaciones - Banco de Sangre");
         setSize(500, 360);
@@ -29,6 +37,9 @@ public class FormularioDonacion extends JFrame {
         configurarEventos();
     }
 
+    /**
+     * Maqueta y distribuye los componentes gráficos dentro del formulario.
+     */
     private void inicializarComponentes() {
         JPanel panelPrincipal = new JPanel(new BorderLayout(10, 10));
         panelPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
@@ -123,6 +134,9 @@ public class FormularioDonacion extends JFrame {
         add(panelPrincipal);
     }
 
+    /**
+     * Registra los listeners de acción de los botones y de edición en los campos de texto.
+     */
     private void configurarEventos() {
         btnGuardar.addActionListener(e -> procesarGuardado());
         btnLimpiar.addActionListener(e -> limpiarFormulario());
@@ -161,6 +175,9 @@ public class FormularioDonacion extends JFrame {
         }
     }
 
+    /**
+     * Ejecuta el flujo de validación y guardado de la donación cuando se presiona el botón Guardar.
+     */
     public void procesarGuardado() {
         if (!validarCamposVacios()) {
             lblFechaCaducidad.setText(" ");
@@ -196,6 +213,12 @@ public class FormularioDonacion extends JFrame {
         }
     }
 
+    /**
+     * Valida que los campos obligatorios no estén vacíos.
+     * Si algún campo está vacío, lo marca con borde rojo y muestra "Información obligatoria".
+     *
+     * @return true si todos los campos tienen contenido; false en caso contrario.
+     */
     public boolean validarCamposVacios() {
         boolean esValido = true;
 
@@ -225,6 +248,11 @@ public class FormularioDonacion extends JFrame {
         return esValido;
     }
 
+    /**
+     * Valida que el volumen ingresado sea un número entero positivo mayor a 0.
+     *
+     * @return true si el volumen es numérico y mayor a 0; false en caso contrario.
+     */
     public boolean validarFormatoVolumen() {
         String textoVolumen = txtVolumenMl.getText().trim();
         try {
@@ -252,14 +280,27 @@ public class FormularioDonacion extends JFrame {
         etiquetaError.setVisible(true);
     }
 
+    /**
+     * Verifica si el campo de nombre del donante se encuentra marcado en rojo con alerta visible.
+     *
+     * @return true si el campo nombre tiene estado de error activo.
+     */
     public boolean tieneErrorEnNombre() {
         return txtNombreDonante.getBorder() == bordeError && lblErrorNombre.isVisible();
     }
 
+    /**
+     * Verifica si el campo de volumen se encuentra marcado en rojo con alerta visible.
+     *
+     * @return true si el campo volumen tiene estado de error activo.
+     */
     public boolean tieneErrorEnVolumen() {
         return txtVolumenMl.getBorder() == bordeError && lblErrorVolumen.isVisible();
     }
 
+    /**
+     * Restablece todos los campos, bordes y etiquetas del formulario a su estado inicial.
+     */
     public void limpiarFormulario() {
         txtNombreDonante.setText("");
         txtVolumenMl.setText("");
