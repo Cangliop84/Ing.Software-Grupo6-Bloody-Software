@@ -23,8 +23,7 @@ public class Donacion {
 
     //Metodo para guardar en MongoDB Atlas
     public void guardarEnMongo() {
-        String uri = "mongodb+srv://rdominguez2024_db_user:VU5eakjWxXqaDJww@grupo6.ddnbvei.mongodb.net/?compressors=zlib";
-
+        String uri = "mongodb://rdominguez2024_db_user:VU5eakJwxXqaDJww@grupo6-shard-00-00.ddnbvei.mongodb.net:27017,grupo6-shard-00-01.ddnbvei.mongodb.net:27017,grupo6-shard-00-02.ddnbvei.mongodb.net:27017/?ssl=true&replicaSet=atlas-ddnbvei-shard-0&authSource=admin&retryWrites=true&w=majority";
         try (MongoClient mongoClient = MongoClients.create(uri)) {
             MongoDatabase database = mongoClient.getDatabase("banco_sangre");
             MongoCollection<Document> collection = database.getCollection("donaciones");
