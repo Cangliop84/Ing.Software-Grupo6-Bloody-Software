@@ -13,6 +13,7 @@ public class FormularioDonacion extends JFrame {
     private JLabel lblErrorNombre;
     private JLabel lblErrorVolumen;
     private JLabel lblMensajeEstado;
+    private JLabel lblFechaCaducidad;
     private JButton btnGuardar;
     private JButton btnLimpiar;
     private Border bordePorDefecto;
@@ -20,7 +21,7 @@ public class FormularioDonacion extends JFrame {
 
     public FormularioDonacion() {
         setTitle("Formulario de Donaciones - Banco de Sangre");
-        setSize(480, 330);
+        setSize(500, 360);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -45,12 +46,13 @@ public class FormularioDonacion extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0.35;
-        JLabel lblNombre = new JLabel("Nombre donante:");
+        JLabel lblNombre = new JLabel("Nombre donante (*):");
         panelFormulario.add(lblNombre, gbc);
 
         gbc.gridx = 1;
         gbc.weightx = 0.65;
         txtNombreDonante = new JTextField(18);
+        txtNombreDonante.setToolTipText("Ingrese el nombre completo del donante (campo obligatorio)");
         bordePorDefecto = txtNombreDonante.getBorder();
         panelFormulario.add(txtNombreDonante, gbc);
 
@@ -68,12 +70,13 @@ public class FormularioDonacion extends JFrame {
         gbc.gridy = 2;
         gbc.weightx = 0.35;
         gbc.insets = new Insets(5, 5, 2, 5);
-        JLabel lblVolumen = new JLabel("Volumen donado (ml):");
+        JLabel lblVolumen = new JLabel("Volumen donado ml (*):");
         panelFormulario.add(lblVolumen, gbc);
 
         gbc.gridx = 1;
         gbc.weightx = 0.65;
         txtVolumenMl = new JTextField(18);
+        txtVolumenMl.setToolTipText("Ingrese el volumen extraído en mililitros (campo obligatorio)");
         panelFormulario.add(txtVolumenMl, gbc);
 
         gbc.gridx = 1;
@@ -84,6 +87,16 @@ public class FormularioDonacion extends JFrame {
         lblErrorVolumen.setFont(new Font("SansSerif", Font.PLAIN, 11));
         lblErrorVolumen.setVisible(false);
         panelFormulario.add(lblErrorVolumen, gbc);
+
+        // Etiqueta informativa de caducidad calculada
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(6, 5, 4, 5);
+        lblFechaCaducidad = new JLabel(" ", SwingConstants.CENTER);
+        lblFechaCaducidad.setForeground(new Color(70, 70, 70));
+        lblFechaCaducidad.setFont(new Font("SansSerif", Font.ITALIC, 12));
+        panelFormulario.add(lblFechaCaducidad, gbc);
 
         panelPrincipal.add(panelFormulario, BorderLayout.CENTER);
 
@@ -141,18 +154,21 @@ public class FormularioDonacion extends JFrame {
         if (!campo.getText().trim().isEmpty()) {
             campo.setBorder(bordePorDefecto);
             etiquetaError.setVisible(false);
-            if (!lblErrorNombre.isVisible() && !lblErrorVolumen.isVisible()) {
+            if (!lblErrorNombre.isVisible() && !lblErrorVolumen.isVisible()
+                    && Color.RED.equals(lblMensajeEstado.getForeground())) {
                 lblMensajeEstado.setText(" ");
             }
         }
     }
 
-    private void procesarGuardado() {
+    public void procesarGuardado() {
         if (!validarCamposVacios()) {
+            lblFechaCaducidad.setText(" ");
             return;
         }
 
         if (!validarFormatoVolumen()) {
+            lblFechaCaducidad.setText(" ");
             return;
         }
 
@@ -168,6 +184,7 @@ public class FormularioDonacion extends JFrame {
 
             lblMensajeEstado.setForeground(new Color(0, 128, 0));
             lblMensajeEstado.setText("¡Donación registrada y guardada con éxito!");
+            lblFechaCaducidad.setText("Fecha de caducidad asignada: " + fechaCaducidad);
 
             txtNombreDonante.setText("");
             txtVolumenMl.setText("");
@@ -235,6 +252,14 @@ public class FormularioDonacion extends JFrame {
         etiquetaError.setVisible(true);
     }
 
+    public boolean tieneErrorEnNombre() {
+        return txtNombreDonante.getBorder() == bordeError && lblErrorNombre.isVisible();
+    }
+
+    public boolean tieneErrorEnVolumen() {
+        return txtVolumenMl.getBorder() == bordeError && lblErrorVolumen.isVisible();
+    }
+
     public void limpiarFormulario() {
         txtNombreDonante.setText("");
         txtVolumenMl.setText("");
@@ -243,6 +268,7 @@ public class FormularioDonacion extends JFrame {
         lblErrorNombre.setVisible(false);
         lblErrorVolumen.setVisible(false);
         lblMensajeEstado.setText(" ");
+        lblFechaCaducidad.setText(" ");
     }
 
     public JTextField getTxtNombreDonante() {
@@ -263,6 +289,10 @@ public class FormularioDonacion extends JFrame {
 
     public JLabel getLblMensajeEstado() {
         return lblMensajeEstado;
+    }
+
+    public JLabel getLblFechaCaducidad() {
+        return lblFechaCaducidad;
     }
 
     public JButton getBtnGuardar() {
