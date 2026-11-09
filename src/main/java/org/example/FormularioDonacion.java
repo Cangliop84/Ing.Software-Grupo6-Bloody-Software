@@ -21,6 +21,7 @@ public class FormularioDonacion extends JFrame {
     private JLabel lblFechaCaducidad;
     private JButton btnGuardar;
     private JButton btnLimpiar;
+    private JButton btnVerInventario;
     private Border bordePorDefecto;
     private final Border bordeError = BorderFactory.createLineBorder(Color.RED, 2);
 
@@ -119,12 +120,16 @@ public class FormularioDonacion extends JFrame {
         panelInferior.add(lblMensajeEstado, BorderLayout.NORTH);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        btnVerInventario = new JButton("Ver Inventario");
+        btnVerInventario.setPreferredSize(new Dimension(120, 32));
+
         btnLimpiar = new JButton("Limpiar");
         btnLimpiar.setPreferredSize(new Dimension(100, 32));
 
         btnGuardar = new JButton("Guardar");
         btnGuardar.setPreferredSize(new Dimension(110, 32));
 
+        panelBotones.add(btnVerInventario);
         panelBotones.add(btnLimpiar);
         panelBotones.add(btnGuardar);
         panelInferior.add(panelBotones, BorderLayout.SOUTH);
@@ -140,6 +145,10 @@ public class FormularioDonacion extends JFrame {
     private void configurarEventos() {
         btnGuardar.addActionListener(e -> procesarGuardado());
         btnLimpiar.addActionListener(e -> limpiarFormulario());
+        btnVerInventario.addActionListener(e -> {
+            TablaInventario vistaInventario = new TablaInventario();
+            vistaInventario.setVisible(true);
+        });
 
         agregarListenerLimpiezaError(txtNombreDonante, lblErrorNombre);
         agregarListenerLimpiezaError(txtVolumenMl, lblErrorVolumen);
