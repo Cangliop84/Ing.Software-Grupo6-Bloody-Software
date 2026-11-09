@@ -21,7 +21,7 @@ public class TablaInventario extends JFrame {
 
     public TablaInventario() {
         setTitle("Inventario de Stock de Sangre - Banco de Sangre");
-        setSize(700, 420);
+        setSize(720, 440);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -63,7 +63,7 @@ public class TablaInventario extends JFrame {
         };
 
         tablaStock = new JTable(modeloTabla);
-        tablaStock.setRowHeight(24);
+        tablaStock.setRowHeight(26);
         tablaStock.setFillsViewportHeight(true);
 
         scrollPaneTabla = new JScrollPane(tablaStock);
@@ -91,5 +91,12 @@ public class TablaInventario extends JFrame {
     public JScrollPane getScrollPaneTabla() {
         return scrollPaneTabla;
     }
-}
 
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            TablaInventario vista = new TablaInventario();
+            vista.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            vista.setVisible(true);
+        });
+    }
+}

@@ -7,6 +7,9 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             FormularioDonacion formulario = new FormularioDonacion();
             formulario.setVisible(true);
+
+            TablaInventario inventario = new TablaInventario();
+            inventario.setVisible(true);
         });
     }
 }
