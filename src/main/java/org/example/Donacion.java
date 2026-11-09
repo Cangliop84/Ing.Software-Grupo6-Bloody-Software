@@ -34,9 +34,9 @@ public class Donacion {
 
             collection.insertOne(doc);
             System.out.println("¡Donación guardada en MongoDB Atlas con éxito!");
-            
+
         } catch (Exception e) {
-            System.out.println("Error al conectar con MongoDB: " + e.getMessage());
+            throw new RuntimeException("Error al conectar con MongoDB: " + e.getMessage(), e);
         }
     }
 }
