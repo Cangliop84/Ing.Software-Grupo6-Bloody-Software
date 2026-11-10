@@ -27,8 +27,8 @@ public class TablaInventario extends JFrame {
         setSize(720, 440);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
-
         inicializarComponentes();
+        configurarEventos();
     }
 
     private void inicializarComponentes() {
@@ -87,7 +87,8 @@ public class TablaInventario extends JFrame {
         if (grupoSeleccionado == null || grupoSeleccionado.equals("Todos")) {
             sorter.setRowFilter(null);
         } else {
-            sorter.setRowFilter(RowFilter.regexFilter("^" + grupoSeleccionado + "$", 1));
+            String regexSeguro = "^" + java.util.regex.Pattern.quote(grupoSeleccionado) + "$";
+            sorter.setRowFilter(RowFilter.regexFilter(regexSeguro, 1));
         }
     }
     public JTable getTablaStock() {
