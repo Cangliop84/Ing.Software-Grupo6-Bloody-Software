@@ -3,9 +3,12 @@ package org.example;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import javax.swing.table.TableRowSorter;
+import javax.swing.RowFilter;
 
 public class TablaInventario extends JFrame {
     private JTable tablaStock;
+    private TableRowSorter<DefaultTableModel> sorter;
     private DefaultTableModel modeloTabla;
     private JComboBox<String> cmbFiltroGrupoSanguineo;
     private JButton btnActualizar;
@@ -63,6 +66,8 @@ public class TablaInventario extends JFrame {
         };
 
         tablaStock = new JTable(modeloTabla);
+        sorter = new TableRowSorter<>(modeloTabla);
+        tablaStock.setRowSorter(sorter);
         tablaStock.setRowHeight(26);
         tablaStock.setFillsViewportHeight(true);
 
@@ -72,6 +77,19 @@ public class TablaInventario extends JFrame {
         add(panelPrincipal);
     }
 
+    private void configurarEventos() {
+        cmbFiltroGrupoSanguineo.addActionListener(e -> aplicarFiltro());
+    }
+
+    private void aplicarFiltro() {
+        String grupoSeleccionado = (String) cmbFiltroGrupoSanguineo.getSelectedItem();
+
+        if (grupoSeleccionado == null || grupoSeleccionado.equals("Todos")) {
+            sorter.setRowFilter(null);
+        } else {
+            sorter.setRowFilter(RowFilter.regexFilter("^" + grupoSeleccionado + "$", 1));
+        }
+    }
     public JTable getTablaStock() {
         return tablaStock;
     }
