@@ -30,10 +30,10 @@ public class TablaInventario extends JFrame {
             "Nombre Donante", "Grupo Sanguíneo", "Volumen (ml)", "Fecha Caducidad"
     };
 
-    private static final double[] PROPORCIONES_COLUMNAS = {0.35, 0.20, 0.20, 0.25};
+    private static final double[] PROPORCIONES_COLUMNAS = { 0.35, 0.20, 0.20, 0.25 };
 
     public TablaInventario() {
-        setTitle("Inventario de Stock de Sangre - Banco de Sangre");
+        setTitle("Inventario de Stock de Sangre - Banco de Sangre Bloody");
         setSize(740, 460);
         setMinimumSize(new Dimension(480, 320));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -92,7 +92,7 @@ public class TablaInventario extends JFrame {
         // Panel inferior: Barra de resumen de unidades disponibles
         JPanel panelInferior = new JPanel(new BorderLayout());
         panelInferior.setBorder(BorderFactory.createEmptyBorder(4, 2, 0, 2));
-        lblResumenStock = new JLabel("Unidades en vista: 0 | Volumen total: 0 ml");
+        lblResumenStock = new JLabel("Unidades: 0 | Volumen total: 0 ml");
         lblResumenStock.setFont(new Font("SansSerif", Font.BOLD, 12));
         lblResumenStock.setForeground(new Color(60, 60, 60));
         panelInferior.add(lblResumenStock, BorderLayout.WEST);
@@ -118,8 +118,8 @@ public class TablaInventario extends JFrame {
         DefaultTableCellRenderer centrarRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
-                                                           boolean isSelected, boolean hasFocus,
-                                                           int row, int column) {
+                    boolean isSelected, boolean hasFocus,
+                    int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
                     c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 245, 245));
