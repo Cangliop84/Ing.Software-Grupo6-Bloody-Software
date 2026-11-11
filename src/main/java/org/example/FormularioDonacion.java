@@ -14,6 +14,7 @@ import java.time.LocalDate;
  */
 public class FormularioDonacion extends JFrame {
     private JTextField txtNombreDonante;
+    private JComboBox<String> cmbGrupoSanguineo;
     private JTextField txtVolumenMl;
     private JLabel lblErrorNombre;
     private JLabel lblErrorVolumen;
@@ -30,7 +31,7 @@ public class FormularioDonacion extends JFrame {
      */
     public FormularioDonacion() {
         setTitle("Formulario de Donaciones - Banco de Sangre");
-        setSize(500, 360);
+        setSize(500, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -77,9 +78,23 @@ public class FormularioDonacion extends JFrame {
         lblErrorNombre.setVisible(false);
         panelFormulario.add(lblErrorNombre, gbc);
 
-        // Campo: Volumen donado (ml)
+        // Campo: Grupo Sanguíneo
         gbc.gridx = 0;
         gbc.gridy = 2;
+        gbc.weightx = 0.35;
+        gbc.insets = new Insets(5, 5, 2, 5);
+        JLabel lblGrupo = new JLabel("Grupo Sanguíneo (*):");
+        panelFormulario.add(lblGrupo, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 0.65;
+        String[] grupos = {"A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"};
+        cmbGrupoSanguineo = new JComboBox<>(grupos);
+        panelFormulario.add(cmbGrupoSanguineo, gbc);
+
+        // Campo: Volumen donado (ml)
+        gbc.gridx = 0;
+        gbc.gridy = 3;
         gbc.weightx = 0.35;
         gbc.insets = new Insets(5, 5, 2, 5);
         JLabel lblVolumen = new JLabel("Volumen donado ml (*):");
@@ -92,7 +107,7 @@ public class FormularioDonacion extends JFrame {
         panelFormulario.add(txtVolumenMl, gbc);
 
         gbc.gridx = 1;
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         gbc.insets = new Insets(0, 5, 8, 5);
         lblErrorVolumen = new JLabel("Información obligatoria");
         lblErrorVolumen.setForeground(Color.RED);
@@ -102,7 +117,7 @@ public class FormularioDonacion extends JFrame {
 
         // Etiqueta informativa de caducidad calculada
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         gbc.gridwidth = 2;
         gbc.insets = new Insets(6, 5, 4, 5);
         lblFechaCaducidad = new JLabel(" ", SwingConstants.CENTER);
@@ -199,13 +214,14 @@ public class FormularioDonacion extends JFrame {
         }
 
         String nombre = txtNombreDonante.getText().trim();
+        String grupoSanguineo = cmbGrupoSanguineo.getSelectedItem().toString();
         int volumen = Integer.parseInt(txtVolumenMl.getText().trim());
 
         LocalDate fechaHoy = LocalDate.now();
         LocalDate fechaCaducidad = CalculadoraCaducidad.calcularFechaCaducidad(fechaHoy);
 
         try {
-            Donacion donacion = new Donacion(nombre, volumen, fechaCaducidad);
+            Donacion donacion = new Donacion(nombre, volumen, grupoSanguineo, fechaCaducidad);
             donacion.guardarEnMongo();
 
             lblMensajeEstado.setForeground(new Color(0, 128, 0));
@@ -213,6 +229,7 @@ public class FormularioDonacion extends JFrame {
             lblFechaCaducidad.setText("Fecha de caducidad asignada: " + fechaCaducidad);
 
             txtNombreDonante.setText("");
+            cmbGrupoSanguineo.setSelectedIndex(0);
             txtVolumenMl.setText("");
 
         } catch (Exception ex) {
@@ -312,6 +329,7 @@ public class FormularioDonacion extends JFrame {
      */
     public void limpiarFormulario() {
         txtNombreDonante.setText("");
+        cmbGrupoSanguineo.setSelectedIndex(0);
         txtVolumenMl.setText("");
         txtNombreDonante.setBorder(bordePorDefecto);
         txtVolumenMl.setBorder(bordePorDefecto);
@@ -323,6 +341,10 @@ public class FormularioDonacion extends JFrame {
 
     public JTextField getTxtNombreDonante() {
         return txtNombreDonante;
+    }
+
+    public JComboBox<String> getCmbGrupoSanguineo() {
+        return cmbGrupoSanguineo;
     }
 
     public JTextField getTxtVolumenMl() {
