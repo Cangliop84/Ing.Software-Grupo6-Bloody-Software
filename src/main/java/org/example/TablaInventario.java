@@ -192,11 +192,21 @@ public class TablaInventario extends JFrame {
         return tablaVisible && sinDesbordeHorizontal && columnasConAnchoMinimo;
     }
 
+    /**
+     * Registra los listeners para los eventos de la interfaz visual.
+     * Escucha el cambio de selección en el filtro de grupo sanguíneo
+     * y las modificaciones en los datos de la tabla.
+     */
     private void configurarEventos() {
         cmbFiltroGrupoSanguineo.addActionListener(e -> aplicarFiltro());
         modeloTabla.addTableModelListener(e -> actualizarResumenStock());
     }
 
+    /**
+     * Aplica el filtro por grupo sanguíneo en la tabla.
+     * Si se selecciona Todos, muestra todas las filas.
+     * De lo contrario, filtra la columna de grupo sanguíneo por coincidencia exacta.
+     */
     private void aplicarFiltro() {
         String grupoSeleccionado = (String) cmbFiltroGrupoSanguineo.getSelectedItem();
 
