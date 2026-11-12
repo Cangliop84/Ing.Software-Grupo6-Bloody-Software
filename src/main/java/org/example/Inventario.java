@@ -1,5 +1,4 @@
 package org.example;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,12 +8,19 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+/**
+ * Gestiona las operaciones de consulta y recuperación del inventario 
+ * de sangre directamente desde la base de datos en la nube (MongoDB Atlas).
+ */
 public class Inventario {
-
     private static final String URI = "mongodb://rdominguez2024_db_user:Jose123@ac-15adclh-shard-00-00.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-01.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-02.ddnbvei.mongodb.net:27017/?ssl=true&replicaSet=atlas-t74n7s-shard-0&authSource=admin";
     private static final String DATABASE_NAME = "banco_sangre";
     private static final String COLLECTION_NAME = "donaciones";
 
+    /**
+     * Consulta la colección de donaciones en MongoDB, mapea cada documento 
+     * BSON recuperado a un objeto de tipo Donacion y retorna la lista completa del inventario.
+     */
     public List<Donacion> obtenerInventario() {
         List<Donacion> inventario = new ArrayList<>();
 
@@ -34,7 +40,6 @@ public class Inventario {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
         return inventario;
     }
 }
