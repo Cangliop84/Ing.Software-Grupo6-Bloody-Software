@@ -9,16 +9,19 @@ import java.time.LocalDate;
 public class Donacion {
     private String nombreDonante;
     private int volumenMl;
+    private String grupoSanguineo;
     private LocalDate fechaCaducidad;
 
-    public Donacion(String nombreDonante, int volumenMl, LocalDate fechaCaducidad) {
+    public Donacion(String nombreDonante, int volumenMl, String grupoSanguineo, LocalDate fechaCaducidad) {
         this.nombreDonante = nombreDonante;
         this.volumenMl = volumenMl;
+        this.grupoSanguineo = grupoSanguineo;
         this.fechaCaducidad = fechaCaducidad;
     }
 
     public String getNombreDonante() { return nombreDonante; }
     public int getVolumenMl() { return volumenMl; }
+    public String getGrupoSanguineo() { return grupoSanguineo; }
     public LocalDate getFechaCaducidad() { return fechaCaducidad; }
 
     //Metodo para guardar en MongoDB Atlas
@@ -30,6 +33,7 @@ public class Donacion {
 
             Document doc = new Document("nombreDonante", this.nombreDonante)
                             .append("volumenMl", this.volumenMl)
+                            .append("grupoSanguineo", this.grupoSanguineo)
                             .append("fechaCaducidad", this.fechaCaducidad.toString());
 
             collection.insertOne(doc);

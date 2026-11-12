@@ -37,4 +37,35 @@ public class TablaInventarioTest {
         assertEquals("O-", vistaInventario.getTablaStock().getValueAt(0, 1),
                 "El grupo sanguíneo de la fila visible debe ser O-.");
     }
+    //agrego test para validar que  al seleccionar "Todos" en el ComboBox, el filtro se limpie y vuelva a mostrar la totalidad de los registros de la tabla
+    @Test
+    public void testRestablecerFiltroTodos() {
+        javax.swing.table.DefaultTableModel modelo = vistaInventario.getModeloTabla();
+        modelo.addRow(new Object[]{"Juan", "O+", "450", "2026-12-01"});
+        modelo.addRow(new Object[]{"Ana", "A-", "450", "2026-12-05"});
+
+        //aplicar el filtro primero
+        vistaInventario.getCmbFiltroGrupoSanguineo().setSelectedItem("O+");
+        org.junit.jupiter.api.Assertions.assertEquals(1, vistaInventario.getTablaStock().getRowCount(), "Debe mostrar 1 fila.");
+
+        //vuelve a seleccionar "Todos"
+        vistaInventario.getCmbFiltroGrupoSanguineo().setSelectedItem("Todos");
+        org.junit.jupiter.api.Assertions.assertEquals(2, vistaInventario.getTablaStock().getRowCount(), 
+                "Al seleccionar 'Todos', deben volver a ser visibles todas las filas.");
+    }
+
+    @Test
+    public void testActualizarResumenStockSumaVolumenes() {
+        javax.swing.table.DefaultTableModel modelo = vistaInventario.getModeloTabla();
+        //agregar dos unidades de 450ml
+        modelo.addRow(new Object[]{"Juan", "O+", "450", "2026-12-01"});
+        modelo.addRow(new Object[]{"Ana", "O+", "450", "2026-12-05"});
+        
+        //forzar la actualización del resumen
+        vistaInventario.actualizarResumenStock();
+        
+        String textoResumen = vistaInventario.getLblResumenStock().getText();
+        org.junit.jupiter.api.Assertions.assertTrue(textoResumen.contains("900"), 
+                "El resumen debe sumar correctamente los volúmenes (900 ml) de las filas visibles.");
+    }
 }

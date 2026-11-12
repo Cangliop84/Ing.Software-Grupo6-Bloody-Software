@@ -1,10 +1,9 @@
 package org.example;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.bson.Document;
-
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
@@ -26,9 +25,10 @@ public class Inventario {
             for (Document doc : collection.find()) {
                 String nombre = doc.getString("nombreDonante");
                 int volumen = doc.getInteger("volumenMl");
+                String grupoSanguineo = doc.getString("grupoSanguineo");
                 LocalDate fecha = LocalDate.parse(doc.getString("fechaCaducidad"));
                 
-                Donacion donacion = new Donacion(nombre, volumen, fecha);
+                Donacion donacion = new Donacion(nombre, volumen, grupoSanguineo, fecha);
                 inventario.add(donacion);
             }
         } catch (Exception e) {

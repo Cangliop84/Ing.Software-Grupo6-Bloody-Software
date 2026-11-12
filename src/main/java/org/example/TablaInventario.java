@@ -14,6 +14,8 @@ import java.awt.event.ComponentEvent;
 public class TablaInventario extends JFrame {
     private JPanel panelPrincipal;
     private JPanel panelSuperior;
+    private JPanel panelFiltro;
+    private JLabel lblTitulo;
     private JTable tablaStock;
     private TableRowSorter<DefaultTableModel> sorter;
     private DefaultTableModel modeloTabla;
@@ -21,6 +23,7 @@ public class TablaInventario extends JFrame {
     private JButton btnActualizar;
     private JScrollPane scrollPaneTabla;
     private JLabel lblResumenStock;
+    private boolean modoCompactoActivo = false;
 
     public static final String[] GRUPOS_SANGUINEOS = {
             "Todos", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
@@ -30,10 +33,11 @@ public class TablaInventario extends JFrame {
             "Nombre Donante", "Grupo Sanguíneo", "Volumen (ml)", "Fecha Caducidad"
     };
 
-    private static final double[] PROPORCIONES_COLUMNAS = {0.35, 0.20, 0.20, 0.25};
+    private static final double[] PROPORCIONES_COLUMNAS = { 0.35, 0.20, 0.20, 0.25 };
+    private static final int UMBRAL_ANCHO_COMPACTO = 620;
 
     public TablaInventario() {
-        setTitle("Inventario de Stock de Sangre - Banco de Sangre");
+        setTitle("Inventario de Stock de Sangre - Banco de Sangre Bloody");
         setSize(740, 460);
         setMinimumSize(new Dimension(480, 320));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -52,11 +56,11 @@ public class TablaInventario extends JFrame {
         // Panel superior: Título y selector de filtro por grupo sanguíneo
         panelSuperior = new JPanel(new BorderLayout(10, 10));
 
-        JLabel lblTitulo = new JLabel("Stock de Unidades de Sangre", SwingConstants.LEFT);
+        lblTitulo = new JLabel("Stock de Unidades de Sangre", SwingConstants.LEFT);
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 16));
         panelSuperior.add(lblTitulo, BorderLayout.WEST);
 
-        JPanel panelFiltro = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        panelFiltro = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         JLabel lblFiltro = new JLabel("Filtrar por Grupo Sanguíneo:");
         cmbFiltroGrupoSanguineo = new JComboBox<>(GRUPOS_SANGUINEOS);
         cmbFiltroGrupoSanguineo.setPreferredSize(new Dimension(110, 28));
@@ -92,7 +96,7 @@ public class TablaInventario extends JFrame {
         // Panel inferior: Barra de resumen de unidades disponibles
         JPanel panelInferior = new JPanel(new BorderLayout());
         panelInferior.setBorder(BorderFactory.createEmptyBorder(4, 2, 0, 2));
-        lblResumenStock = new JLabel("Unidades en vista: 0 | Volumen total: 0 ml");
+        lblResumenStock = new JLabel("Unidades: 0 | Volumen total: 0 ml");
         lblResumenStock.setFont(new Font("SansSerif", Font.BOLD, 12));
         lblResumenStock.setForeground(new Color(60, 60, 60));
         panelInferior.add(lblResumenStock, BorderLayout.WEST);
@@ -118,8 +122,8 @@ public class TablaInventario extends JFrame {
         DefaultTableCellRenderer centrarRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
-                                                           boolean isSelected, boolean hasFocus,
-                                                           int row, int column) {
+                    boolean isSelected, boolean hasFocus,
+                    int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
                     c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 245, 245));
@@ -135,16 +139,47 @@ public class TablaInventario extends JFrame {
     }
 
     private void configurarDisenoResponsivo() {
-        ajustarColumnasProporcionalmente();
+        ajustarVistaSegunResolucion();
 
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                ajustarColumnasProporcionalmente();
-                revalidate();
-                repaint();
+                ajustarVistaSegunResolucion();
             }
         });
+    }
+
+    private void ajustarVistaSegunResolucion() {
+        ajustarLayoutPanelSuperior(getWidth());
+        ajustarColumnasProporcionalmente();
+        revalidate();
+        repaint();
+    }
+
+    public void ajustarLayoutPanelSuperior(int anchoVentana) {
+        boolean requiereModoCompacto = anchoVentana > 0 && anchoVentana < UMBRAL_ANCHO_COMPACTO;
+        if (requiereModoCompacto == modoCompactoActivo) {
+            return;
+        }
+
+        modoCompactoActivo = requiereModoCompacto;
+        panelSuperior.removeAll();
+
+        if (modoCompactoActivo) {
+            panelSuperior.setLayout(new GridLayout(2, 1, 4, 6));
+            lblTitulo.setHorizontalAlignment(SwingConstants.CENTER);
+            panelFiltro.setLayout(new FlowLayout(FlowLayout.CENTER, 6, 0));
+            panelSuperior.add(lblTitulo);
+            panelSuperior.add(panelFiltro);
+        } else {
+            panelSuperior.setLayout(new BorderLayout(10, 10));
+            lblTitulo.setHorizontalAlignment(SwingConstants.LEFT);
+            panelFiltro.setLayout(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            panelSuperior.add(lblTitulo, BorderLayout.WEST);
+            panelSuperior.add(panelFiltro, BorderLayout.EAST);
+        }
+
+        panelSuperior.revalidate();
     }
 
     public void ajustarColumnasProporcionalmente() {
@@ -167,8 +202,10 @@ public class TablaInventario extends JFrame {
 
     public void cambiarResolucion(int ancho, int alto) {
         setSize(ancho, alto);
+        ajustarLayoutPanelSuperior(ancho);
         doLayout();
         panelPrincipal.doLayout();
+        panelSuperior.doLayout();
         scrollPaneTabla.doLayout();
         ajustarColumnasProporcionalmente();
     }
@@ -178,7 +215,8 @@ public class TablaInventario extends JFrame {
             return false;
         }
         boolean tablaVisible = tablaStock.getColumnCount() == COLUMNAS_INVENTARIO.length;
-        boolean sinDesbordeHorizontal = scrollPaneTabla.getWidth() <= panelPrincipal.getWidth();
+        boolean sinDesbordeHorizontal = scrollPaneTabla.getWidth() <= panelPrincipal.getWidth()
+                && panelSuperior.getWidth() <= panelPrincipal.getWidth();
         boolean columnasConAnchoMinimo = true;
 
         TableColumnModel columnModel = tablaStock.getColumnModel();
@@ -192,11 +230,33 @@ public class TablaInventario extends JFrame {
         return tablaVisible && sinDesbordeHorizontal && columnasConAnchoMinimo;
     }
 
+    public void agregarFilaInventario(String nombreDonante, String grupoSanguineo, int volumenMl, String fechaCaducidad) {
+        modeloTabla.addRow(new Object[]{nombreDonante, grupoSanguineo, volumenMl, fechaCaducidad});
+    }
+
+    public void limpiarTabla() {
+        modeloTabla.setRowCount(0);
+    }
+
+    public void restablecerFiltro() {
+        cmbFiltroGrupoSanguineo.setSelectedItem("Todos");
+    }
+
+    /**
+     * Registra los listeners para los eventos de la interfaz visual.
+     * Escucha el cambio de selección en el filtro de grupo sanguíneo
+     * y las modificaciones en los datos de la tabla.
+     */
     private void configurarEventos() {
         cmbFiltroGrupoSanguineo.addActionListener(e -> aplicarFiltro());
         modeloTabla.addTableModelListener(e -> actualizarResumenStock());
     }
 
+    /**
+     * Aplica el filtro por grupo sanguíneo en la tabla.
+     * Si se selecciona Todos, muestra todas las filas.
+     * De lo contrario, filtra la columna de grupo sanguíneo por coincidencia exacta.
+     */
     private void aplicarFiltro() {
         String grupoSeleccionado = (String) cmbFiltroGrupoSanguineo.getSelectedItem();
 
@@ -224,6 +284,10 @@ public class TablaInventario extends JFrame {
         }
 
         lblResumenStock.setText("Unidades en vista: " + filasVisibles + " | Volumen total: " + volumenTotal + " ml");
+    }
+
+    public boolean isModoCompactoActivo() {
+        return modoCompactoActivo;
     }
 
     public JTable getTablaStock() {
