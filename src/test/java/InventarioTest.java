@@ -15,4 +15,22 @@ public class InventarioTest {
         List<Donacion> lista = assertDoesNotThrow(() -> inventario.obtenerInventario());
         assertNotNull(lista);
     }
+
+
+    @Test
+    public void testObtenerInventario() {
+        Inventario inventarioDao = new Inventario();
+        
+        // Ejecutamos el método que consulta la base de datos
+        List<Donacion> listaInventario = inventarioDao.obtenerInventario();
+
+        // Validamos que la lista no sea nula (la conexión y consulta respondieron)
+        assertNotNull(listaInventario, "El inventario no debería ser nulo.");
+        
+        // Mensaje en consola para verificar los registros obtenidos
+        System.out.println("Registros encontrados en el inventario: " + listaInventario.size());
+        for (Donacion d : listaInventario) {
+            System.out.println("- Donante: " + d.getNombreDonante() + " | Grupo: " + d.getGrupoSanguineo() + " | Volumen: " + d.getVolumenMl() + " ml");
+        }
+    }
 }
