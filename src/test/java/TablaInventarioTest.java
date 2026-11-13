@@ -3,9 +3,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import javax.swing.table.DefaultTableModel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Pruebas unitarias para la vista del inventario de sangre (Tarea T08).
+ * Pruebas unitarias y de aceptación para la vista del inventario de sangre (Tareas T07 y T08).
  */
 public class TablaInventarioTest {
 
@@ -67,5 +69,54 @@ public class TablaInventarioTest {
         String textoResumen = vistaInventario.getLblResumenStock().getText();
         org.junit.jupiter.api.Assertions.assertTrue(textoResumen.contains("900"), 
                 "El resumen debe sumar correctamente los volúmenes (900 ml) de las filas visibles.");
+    }
+
+    /**
+     * Test 1 (T07): Diseño responsivo.
+     * Dado la vista construida, cuando abro la ventana en diferentes resoluciones,
+     * entonces la tabla se adapta sin romper la estructura.
+     */
+    @Test
+    public void testDisenoResponsivoDiferentesResoluciones_T07() {
+        vistaInventario.agregarFilaInventario("Carlos Ruiz", "A+", 450, "2026-12-10");
+        vistaInventario.agregarFilaInventario("Lucía Fernández", "O-", 400, "2026-12-15");
+
+        // Resolución compacta (< 620px): activa modo compacto del panel superior sin desbordar
+        vistaInventario.cambiarResolucion(500, 360);
+        assertTrue(vistaInventario.isModoCompactoActivo(),
+                "En resolución compacta (500x360) debe activarse el modo compacto del panel superior.");
+        assertTrue(vistaInventario.esEstructuraResponsivaValida(),
+                "La tabla debe adaptarse sin romper su estructura en 500x360.");
+
+        // Resoluciones estándar y panorámica
+        int[][] resoluciones = {
+                {800, 600},
+                {1366, 768},
+                {1920, 1080}
+        };
+
+        for (int[] resolucion : resoluciones) {
+            vistaInventario.cambiarResolucion(resolucion[0], resolucion[1]);
+            assertFalse(vistaInventario.isModoCompactoActivo(),
+                    "En resolución " + resolucion[0] + "x" + resolucion[1] + " debe usarse el layout horizontal normal.");
+            assertTrue(vistaInventario.esEstructuraResponsivaValida(),
+                    "La tabla debe mantener su estructura válida en " + resolucion[0] + "x" + resolucion[1] + ".");
+        }
+    }
+
+    /**
+     * Verifica la inserción y limpieza de filas en la vista mediante sus utilidades (T07).
+     */
+    @Test
+    public void testAgregarYLimpiarFilasInventario_T07() {
+        vistaInventario.agregarFilaInventario("Marta Díaz", "B+", 450, "2026-12-20");
+        assertEquals(1, vistaInventario.getTablaStock().getRowCount(),
+                "Debe existir 1 fila tras agregar una unidad.");
+
+        vistaInventario.limpiarTabla();
+        assertEquals(0, vistaInventario.getTablaStock().getRowCount(),
+                "La tabla debe quedar vacía tras ejecutar limpiarTabla().");
+        assertTrue(vistaInventario.getLblResumenStock().getText().contains("Unidades en vista: 0"),
+                "El resumen debe reflejar 0 unidades visibles tras limpiar la tabla.");
     }
 }

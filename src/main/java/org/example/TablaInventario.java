@@ -11,6 +11,11 @@ import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 
+/**
+ * Vista gráfica principal de la tabla de inventario de stock de sangre (Tarea T07 - US02).
+ * Presenta las unidades registradas en una tabla estilizada y responsiva con selector de
+ * filtro por grupo sanguíneo y barra inferior de resumen.
+ */
 public class TablaInventario extends JFrame {
     private JPanel panelPrincipal;
     private JPanel panelSuperior;
@@ -36,6 +41,9 @@ public class TablaInventario extends JFrame {
     private static final double[] PROPORCIONES_COLUMNAS = { 0.35, 0.20, 0.20, 0.25 };
     private static final int UMBRAL_ANCHO_COMPACTO = 620;
 
+    /**
+     * Construye e inicializa la ventana de inventario de stock de sangre.
+     */
     public TablaInventario() {
         setTitle("Inventario de Stock de Sangre - Banco de Sangre Bloody");
         setSize(740, 460);
@@ -156,6 +164,12 @@ public class TablaInventario extends JFrame {
         repaint();
     }
 
+    /**
+     * Adapta la distribución del panel superior según el ancho de la ventana.
+     * Activa el modo compacto en dos filas cuando el ancho es menor al umbral definido.
+     *
+     * @param anchoVentana Ancho actual de la ventana en píxeles.
+     */
     public void ajustarLayoutPanelSuperior(int anchoVentana) {
         boolean requiereModoCompacto = anchoVentana > 0 && anchoVentana < UMBRAL_ANCHO_COMPACTO;
         if (requiereModoCompacto == modoCompactoActivo) {
@@ -182,6 +196,10 @@ public class TablaInventario extends JFrame {
         panelSuperior.revalidate();
     }
 
+    /**
+     * Recalcula y asigna proporcionalmente el ancho preferido de cada columna
+     * de acuerdo con el espacio disponible en el viewport de la tabla.
+     */
     public void ajustarColumnasProporcionalmente() {
         int anchoDisponible = scrollPaneTabla.getViewport().getWidth();
         if (anchoDisponible <= 0) {
@@ -200,6 +218,12 @@ public class TablaInventario extends JFrame {
         }
     }
 
+    /**
+     * Redimensiona la ventana a una resolución dada y fuerza el reajuste de layout y columnas.
+     *
+     * @param ancho Ancho objetivo en píxeles.
+     * @param alto  Alto objetivo en píxeles.
+     */
     public void cambiarResolucion(int ancho, int alto) {
         setSize(ancho, alto);
         ajustarLayoutPanelSuperior(ancho);
@@ -210,6 +234,12 @@ public class TablaInventario extends JFrame {
         ajustarColumnasProporcionalmente();
     }
 
+    /**
+     * Verifica que la tabla mantenga todas sus columnas visibles, sin desbordamiento
+     * horizontal y con anchos mínimos válidos tras cambiar de resolución.
+     *
+     * @return true si la estructura responsiva es válida; false en caso contrario.
+     */
     public boolean esEstructuraResponsivaValida() {
         if (getWidth() <= 0 || getHeight() <= 0) {
             return false;
@@ -230,14 +260,28 @@ public class TablaInventario extends JFrame {
         return tablaVisible && sinDesbordeHorizontal && columnasConAnchoMinimo;
     }
 
+    /**
+     * Agrega una nueva fila de donación a la tabla de inventario.
+     *
+     * @param nombreDonante  Nombre del donante.
+     * @param grupoSanguineo Grupo sanguíneo de la unidad.
+     * @param volumenMl      Volumen donado en mililitros.
+     * @param fechaCaducidad Fecha límite de caducidad en formato texto.
+     */
     public void agregarFilaInventario(String nombreDonante, String grupoSanguineo, int volumenMl, String fechaCaducidad) {
         modeloTabla.addRow(new Object[]{nombreDonante, grupoSanguineo, volumenMl, fechaCaducidad});
     }
 
+    /**
+     * Elimina todas las filas actuales del modelo de la tabla.
+     */
     public void limpiarTabla() {
         modeloTabla.setRowCount(0);
     }
 
+    /**
+     * Restablece el selector de grupo sanguíneo a la opción "Todos".
+     */
     public void restablecerFiltro() {
         cmbFiltroGrupoSanguineo.setSelectedItem("Todos");
     }
@@ -269,6 +313,10 @@ public class TablaInventario extends JFrame {
         actualizarResumenStock();
     }
 
+    /**
+     * Calcula y actualiza en la barra inferior el total de unidades visibles
+     * y la suma de sus volúmenes en mililitros.
+     */
     public void actualizarResumenStock() {
         int filasVisibles = tablaStock.getRowCount();
         int volumenTotal = 0;
