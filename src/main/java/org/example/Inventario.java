@@ -14,7 +14,9 @@ public class Inventario {
     private static final String URI = "mongodb://rdominguez2024_db_user:Jose123@ac-15adclh-shard-00-00.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-01.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-02.ddnbvei.mongodb.net:27017/?ssl=true&replicaSet=atlas-t74n7s-shard-0&authSource=admin";
     private static final String DATABASE_NAME = "banco_sangre";
     private static final String COLLECTION_NAME = "donaciones";
-
+    
+     // metodo para obtener el inventario desde mongo atlas
+    // mapea los documentos a objetos de tipo Donacion
     public List<Donacion> obtenerInventario() {
         List<Donacion> inventario = new ArrayList<>();
 
