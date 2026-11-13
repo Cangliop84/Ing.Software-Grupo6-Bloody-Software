@@ -10,7 +10,13 @@ import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-
+//agrego esto para la conexion de las tablas
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.FindIterable;
+import org.bson.Document; 
 /**
  * Vista gráfica principal de la tabla de inventario de stock de sangre (Tarea T07 - US02).
  * Presenta las unidades registradas en una tabla estilizada y responsiva con selector de
@@ -294,8 +300,102 @@ public class TablaInventario extends JFrame {
     private void configurarEventos() {
         cmbFiltroGrupoSanguineo.addActionListener(e -> aplicarFiltro());
         modeloTabla.addTableModelListener(e -> actualizarResumenStock());
+        btnActualizar.addActionListener(e -> cargarDatosDesdeMongoDB());
     }
+/**
+     * Se conecta a MongoDB Atlas en segundo plano, verifica si hay donaciones nuevas,
+     * y actualiza la tabla desconectando los filtros para evitar el colapso (IndexOutOfBounds).
+     */
+    public void cargarDatosDesdeMongoDB() {
+        int filasActuales = modeloTabla.getRowCount();
 
+        new Thread(() -> {
+            String uri = "mongodb://rdominguez2024_db_user:Jose123@ac-15adclh-shard-00-00.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-01.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-02.ddnbvei.mongodb.net:27017/?ssl=true&replicaSet=atlas-t74n7s-shard-0&authSource=admin"; 
+            String nombreBaseDatos = "banco_sangre"; 
+            String nombreColeccion = "donaciones";
+
+            try (MongoClient mongoClient = MongoClients.create(uri)) {
+                MongoDatabase database = mongoClient.getDatabase(nombreBaseDatos);
+                MongoCollection<Document> coleccion = database.getCollection(nombreColeccion);
+
+                //contamos si hay datos nuevos antes de hacer cualquier cosa, asi no actualizamos la tabla si no es necesario
+                long totalDocumentos = coleccion.countDocuments();
+                
+                if (totalDocumentos == filasActuales) {
+                    SwingUtilities.invokeLater(() -> 
+                        javax.swing.JOptionPane.showMessageDialog(this, 
+                        "El inventario ya está actualizado. No se han registrado nuevas donaciones.", 
+                        "Actualización", javax.swing.JOptionPane.INFORMATION_MESSAGE)
+                    );
+                    return; 
+                }
+
+                //descargamos la lista nueva
+                java.util.List<Document> listaDonaciones = new java.util.ArrayList<>();
+                coleccion.find().into(listaDonaciones);
+
+                SwingUtilities.invokeLater(() -> {
+                    //encontre la solucion al error de la tabla
+                    //guardamos el filtro que esta seleccionado
+                    Object filtroSeleccionado = cmbFiltroGrupoSanguineo.getSelectedItem();
+
+                    //DESCONECTAMOS el ordenador interno y soltamos cualquier click del mouse, la tabla explota si no pasa eso
+                    javax.swing.RowSorter<?> sorterGuardado = tablaStock.getRowSorter();
+                    tablaStock.setRowSorter(null); 
+                    tablaStock.clearSelection(); 
+                    
+                    //ahora vaciamos la tabla con total seguridad
+                    limpiarTabla(); 
+
+                    //llenamos con los datos descargados
+                    for (Document doc : listaDonaciones) {
+                        String nombre = doc.getString("nombreDonante");
+                        String grupo = doc.getString("grupoSanguineo");
+                        String fecha = doc.getString("fechaCaducidad");
+                        
+                        int volumen = 0;
+                        Object volObj = doc.get("volumenMl");
+                        if (volObj instanceof Integer) {
+                            volumen = (Integer) volObj;
+                        } else if (volObj instanceof String) {
+                            try {
+                                volumen = Integer.parseInt((String) volObj);
+                            } catch (NumberFormatException ignored) {}
+                        }
+
+                        agregarFilaInventario(
+                            nombre != null ? nombre : "Sin nombre", 
+                            grupo != null ? grupo : "Desconocido", 
+                            volumen, 
+                            fecha != null ? fecha : "Sin fecha"
+                        );
+                    }
+                    
+                    //vollvemos a conectar el ordenador interno de la tabla
+                    tablaStock.setRowSorter((javax.swing.table.TableRowSorter<? extends javax.swing.table.TableModel>) sorterGuardado);
+                    
+                    //foorzamos un reinicio visual del filtro para evitar "filas fantasma"
+                    cmbFiltroGrupoSanguineo.setSelectedItem("Todos"); 
+                    if (filtroSeleccionado != null) {
+                        cmbFiltroGrupoSanguineo.setSelectedItem(filtroSeleccionado);
+                    }
+                    
+                    actualizarResumenStock();
+                    
+                    javax.swing.JOptionPane.showMessageDialog(this, 
+                        "Inventario actualizado con éxito.", 
+                        "Nuevos Datos", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                });
+
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> 
+                    javax.swing.JOptionPane.showMessageDialog(this, 
+                    "Error al conectar con la base de datos:\n" + ex.getMessage(), 
+                    "Error de Conexión", javax.swing.JOptionPane.ERROR_MESSAGE)
+                );
+            }
+        }).start();
+    }
     /**
      * Aplica el filtro por grupo sanguíneo en la tabla.
      * Si se selecciona Todos, muestra todas las filas.

@@ -119,4 +119,25 @@ public class TablaInventarioTest {
         assertTrue(vistaInventario.getLblResumenStock().getText().contains("Unidades en vista: 0"),
                 "El resumen debe reflejar 0 unidades visibles tras limpiar la tabla.");
     }
+    /**
+     * Dado el inventario cargado, cuando cambio el filtro tres veces seguidas,
+     * entonces los datos mostrados corresponden a la última selección sin duplicarse.
+     */
+    @Test //cambios de filtros sucesivos 
+    public void testCambiosDeFiltroSucesivos_T09() {
+        vistaInventario.agregarFilaInventario("Juan", "A+", 450, "2026-12-01");
+        vistaInventario.agregarFilaInventario("Pedro", "O-", 450, "2026-12-01");
+        vistaInventario.agregarFilaInventario("Maria", "A+", 450, "2026-12-01");
+        vistaInventario.agregarFilaInventario("Ana", "B-", 450, "2026-12-01");
+
+        //cambios sucesivos simulando al usuario real
+        vistaInventario.getCmbFiltroGrupoSanguineo().setSelectedItem("O-");
+        vistaInventario.getCmbFiltroGrupoSanguineo().setSelectedItem("B-");
+        vistaInventario.getCmbFiltroGrupoSanguineo().setSelectedItem("A+"); //ultima seleccion
+
+        int filasVisibles = vistaInventario.getTablaStock().getRowCount();
+        assertEquals(2, filasVisibles, "Deberían verse solo 2 filas para el grupo A+ tras múltiples filtrados");
+        assertEquals("A+", vistaInventario.getTablaStock().getValueAt(0, 1));
+        assertEquals("A+", vistaInventario.getTablaStock().getValueAt(1, 1));
+    }
 }
