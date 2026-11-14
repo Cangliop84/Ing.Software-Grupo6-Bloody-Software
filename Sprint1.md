@@ -38,6 +38,6 @@ Equipo: Grupo 06
 
 - Uso disciplinado de Axosoft en Tiempo Real: Establecer la regla estricta de que nadie puede empezar a programar sin antes mover su tarjeta a "In Progress" en Axosoft. Al terminar el día, se deben registrar las horas trabajadas (Worklogs), sin esperar al final del Sprint.
 
-- Reunión semanal obligatoria (Sync de 30 min): Fijar un día a la semana para hacer una videollamada corta. El objetivo será integrar el código (evitando conflictos de último minuto) y revisar el Burndown Chart para asegurar que vamos a un ritmo saludable.
+- Reunión semanal obligatoria (de 30 min): Fijar un día a la semana para hacer una videollamada corta. El objetivo será integrar el código (evitando conflictos de último minuto) y revisar el grafico de trabajo para asegurar que vamos a un ritmo saludable.
 
 - Distribución del liderazgo: Reducir la carga del integrante que hace seguimiento, promoviendo que cada responsable de una User Story sea el encargado de reportar el avance de la misma.
