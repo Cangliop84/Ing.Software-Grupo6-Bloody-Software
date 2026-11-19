@@ -10,6 +10,9 @@ public class Main {
 
             TablaInventario inventario = new TablaInventario();
             inventario.setVisible(true);
+
+            FormularioSolicitudEntrega solicitud = new FormularioSolicitudEntrega();
+            solicitud.setVisible(true);
         });
     }
 }
