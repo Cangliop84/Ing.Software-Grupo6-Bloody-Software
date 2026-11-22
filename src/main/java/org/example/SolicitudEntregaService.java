@@ -1,5 +1,8 @@
 package org.example;
 
+/**
+ * Servicio encargado de validar y generar solicitudes de entrega de sangre (Sprint 02 - T01).
+ */
 public class SolicitudEntregaService {
 
     public static class ResultadoOperacion {
@@ -32,10 +35,25 @@ public class SolicitudEntregaService {
         }
     }
 
+    /**
+     * Genera y persiste una solicitud de entrega validando tipo de sangre y volumen requerido.
+     *
+     * @param tipoSangre    Tipo sanguíneo solicitado (ej. "O+", "A-").
+     * @param volumenTexto  Volumen requerido en mililitros expresado como texto.
+     * @return Resultado de la operación con código HTTP asociado y detalle.
+     */
     public ResultadoOperacion generarSolicitud(String tipoSangre, String volumenTexto) {
         return generarSolicitud(tipoSangre, volumenTexto, true);
     }
 
+    /**
+     * Valida los datos de entrada y genera una solicitud de entrega con persistencia opcional.
+     *
+     * @param tipoSangre    Tipo sanguíneo solicitado.
+     * @param volumenTexto  Volumen requerido en mililitros.
+     * @param persistirEnBd Indica si debe guardarse la solicitud en MongoDB Atlas.
+     * @return Resultado de la operación con código HTTP (201, 400 o 500).
+     */
     public ResultadoOperacion generarSolicitud(String tipoSangre, String volumenTexto, boolean persistirEnBd) {
         if (tipoSangre == null || tipoSangre.trim().isEmpty()) {
             return new ResultadoOperacion(false, 400, "El tipo de sangre es obligatorio y no puede estar vacío.", null);

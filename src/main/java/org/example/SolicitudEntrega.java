@@ -9,6 +9,9 @@ import org.bson.Document;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+/**
+ * Modelo de dominio que representa una solicitud de entrega de sangre hacia un hospital (Sprint 02 - T01).
+ */
 public class SolicitudEntrega {
     public static final Set<String> TIPOS_SANGUINEOS_VALIDOS = Set.of(
             "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
@@ -37,6 +40,11 @@ public class SolicitudEntrega {
         this.estado = estado;
     }
 
+    /**
+     * Convierte la solicitud de entrega en un documento BSON para persistencia en MongoDB.
+     *
+     * @return Documento BSON con los datos de la solicitud.
+     */
     public Document toDocument() {
         return new Document("tipoSangre", this.tipoSangre)
                 .append("volumenRequeridoMl", this.volumenRequeridoMl)
@@ -44,6 +52,9 @@ public class SolicitudEntrega {
                 .append("estado", this.estado);
     }
 
+    /**
+     * Inserta la solicitud de entrega en la colección solicitudes_entrega de MongoDB Atlas.
+     */
     public void guardarEnMongo() {
         try (MongoClient mongoClient = MongoClients.create(URI)) {
             MongoDatabase database = mongoClient.getDatabase(DATABASE_NAME);

@@ -10,6 +10,10 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Controlador HTTP que expone el endpoint POST /api/solicitudes para recibir
+ * solicitudes de entrega en formato JSON (Sprint 02 - T01).
+ */
 public class SolicitudEntregaEndpoint {
     public static final String RUTA_SOLICITUDES = "/api/solicitudes";
 
@@ -26,6 +30,12 @@ public class SolicitudEntregaEndpoint {
         this.persistirEnBd = persistirEnBd;
     }
 
+    /**
+     * Inicia el servidor HTTP en el puerto indicado escuchando en {@value #RUTA_SOLICITUDES}.
+     *
+     * @param puerto Puerto TCP de escucha (0 para asignar uno disponible automáticamente).
+     * @throws IOException Si ocurre un error al enlazar el puerto.
+     */
     public void iniciar(int puerto) throws IOException {
         server = HttpServer.create(new InetSocketAddress(puerto), 0);
         server.createContext(RUTA_SOLICITUDES, this::manejarSolicitudHttp);
@@ -62,6 +72,13 @@ public class SolicitudEntregaEndpoint {
         enviarRespuestaJson(exchange, resultado.getCodigoHttp(), jsonRespuesta);
     }
 
+    /**
+     * Procesa el cuerpo JSON de una petición POST, validando formato no nulo/válido
+     * y delegando la creación al servicio de solicitudes.
+     *
+     * @param jsonBody Cuerpo de la petición en formato JSON.
+     * @return Resultado de la operación con código HTTP 201 o código de error.
+     */
     public SolicitudEntregaService.ResultadoOperacion procesarPost(String jsonBody) {
         if (jsonBody == null || jsonBody.trim().isEmpty()) {
             return new SolicitudEntregaService.ResultadoOperacion(
