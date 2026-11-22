@@ -1,13 +1,16 @@
 package org.example;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 
 /**
  * Formulario de solicitud de entrega de sangre (US03 - T02).
- * Incluye selector de tipo de sangre, input de volumen en ml y ajuste responsivodel layout.
+ * Incluye selector de tipo de sangre, input de volumen en ml, validación del botón solicitar
+ * y ajuste responsivo del layout.
  */
 public class FormularioSolicitudEntrega extends JFrame {
     private static final String[] GRUPOS_SANGUINEOS = {
@@ -138,8 +141,45 @@ public class FormularioSolicitudEntrega extends JFrame {
     }
 
     private void configurarEventos() {
+        btnSolicitar.setEnabled(false);
+
+        cmbTipoSangre.addActionListener(e -> actualizarEstadoBotonSolicitar());
+        txtVolumenMl.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                actualizarEstadoBotonSolicitar();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                actualizarEstadoBotonSolicitar();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                actualizarEstadoBotonSolicitar();
+            }
+        });
+
         btnLimpiar.addActionListener(e -> limpiarFormulario());
         btnSolicitar.addActionListener(e -> enviarSolicitud());
+    }
+
+    public void actualizarEstadoBotonSolicitar() {
+        Object seleccionado = cmbTipoSangre.getSelectedItem();
+        boolean tipoValido = seleccionado != null && !seleccionado.toString().trim().isEmpty();
+
+        String textoVolumen = txtVolumenMl.getText().trim();
+        boolean volumenValido = false;
+        if (!textoVolumen.isEmpty()) {
+            try {
+                volumenValido = Integer.parseInt(textoVolumen) > 0;
+            } catch (NumberFormatException ignored) {
+                volumenValido = false;
+            }
+        }
+
+        btnSolicitar.setEnabled(tipoValido && volumenValido);
     }
 
     private void enviarSolicitud() {
@@ -164,6 +204,7 @@ public class FormularioSolicitudEntrega extends JFrame {
         cmbTipoSangre.setSelectedIndex(-1);
         txtVolumenMl.setText("");
         lblMensajeEstado.setText(" ");
+        actualizarEstadoBotonSolicitar();
     }
 
     // Getters útiles para pruebas unitarias / UI
