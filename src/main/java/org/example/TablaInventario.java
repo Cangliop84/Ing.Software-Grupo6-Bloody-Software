@@ -281,8 +281,9 @@ public class TablaInventario extends JFrame {
     /**
      * Elimina todas las filas actuales del modelo de la tabla.
      */
-    public void limpiarTabla() {
+public void limpiarTabla() {
         modeloTabla.setRowCount(0);
+        actualizarResumenStock();
     }
 
     /**
@@ -418,15 +419,18 @@ public class TablaInventario extends JFrame {
      * y la suma de sus volúmenes en mililitros.
      */
     public void actualizarResumenStock() {
-        int filasVisibles = tablaStock.getRowCount();
+        int filasVisibles = Math.min(tablaStock.getRowCount(), modeloTabla.getRowCount());
         int volumenTotal = 0;
 
         for (int i = 0; i < filasVisibles; i++) {
-            Object valorVolumen = tablaStock.getValueAt(i, 2);
-            if (valorVolumen != null) {
-                try {
-                    volumenTotal += Integer.parseInt(valorVolumen.toString().trim());
-                } catch (NumberFormatException ignored) {
+            int filaModelo = tablaStock.convertRowIndexToModel(i);
+            if (filaModelo >= 0 && filaModelo < modeloTabla.getRowCount()) {
+                Object valorVolumen = modeloTabla.getValueAt(filaModelo, 2);
+                if (valorVolumen != null) {
+                    try {
+                        volumenTotal += Integer.parseInt(valorVolumen.toString().trim());
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
         }
