@@ -29,12 +29,14 @@ public class Inventario {
             MongoCollection<Document> collection = database.getCollection(COLLECTION_NAME);
 
             for (Document doc : collection.find()) {
+                Object rawId = doc.get("_id");
+                String id = rawId != null ? rawId.toString() : null;
                 String nombre = doc.getString("nombreDonante");
                 int volumen = doc.getInteger("volumenMl");
                 String grupoSanguineo = doc.getString("grupoSanguineo");
                 LocalDate fecha = LocalDate.parse(doc.getString("fechaCaducidad"));
-                
                 Donacion donacion = new Donacion(nombre, volumen, grupoSanguineo, fecha);
+                donacion.setId(id);
                 inventario.add(donacion);
             }
         } catch (Exception e) {
