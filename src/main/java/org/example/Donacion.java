@@ -12,6 +12,7 @@ import java.time.LocalDate;
  * su grupo sanguíneo, la fecha de caducidad y la persistencia directa en MongoDB Atlas.
  */
 public class Donacion {
+    private String id;
     private String nombreDonante;
     private int volumenMl;
     private String grupoSanguineo;
@@ -28,6 +29,8 @@ public class Donacion {
         this.fechaCaducidad = fechaCaducidad;
     }
 
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     public String getNombreDonante() { return nombreDonante; }
     public int getVolumenMl() { return volumenMl; }
     public String getGrupoSanguineo() { return grupoSanguineo; }
