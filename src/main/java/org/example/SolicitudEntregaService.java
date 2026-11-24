@@ -105,6 +105,20 @@ public class SolicitudEntregaService {
      * @return Arreglo con los ID de las muestras seleccionadas ordenadas de menor a mayor fecha de caducidad.
      */
     public String[] seleccionarMuestrasFifo(String grupoSanguineo, int volumenSolicitadoMl) {
+        return seleccionarMuestrasDetalleFifo(grupoSanguineo, volumenSolicitadoMl).stream()
+                .map(Donacion::getId)
+                .toArray(String[]::new);
+    }
+
+    /**
+     * Selecciona bajo criterio FIFO las muestras completas (con fechas y volúmenes) que cubren
+     * el volumen solicitado para mostrar su detalle al usuario.
+     *
+     * @param grupoSanguineo      Grupo sanguíneo requerido.
+     * @param volumenSolicitadoMl Volumen total requerido en mililitros.
+     * @return Lista de donaciones seleccionadas ordenadas por fecha de caducidad ascendente.
+     */
+    public List<Donacion> seleccionarMuestrasDetalleFifo(String grupoSanguineo, int volumenSolicitadoMl) {
         if (grupoSanguineo == null || grupoSanguineo.trim().isEmpty()) {
             throw new IllegalArgumentException("El grupo sanguíneo es obligatorio.");
         }
@@ -121,11 +135,11 @@ public class SolicitudEntregaService {
                 .sorted(Comparator.comparing(Donacion::getFechaCaducidad))
                 .toList();
 
-        List<String> idsSeleccionados = new ArrayList<>();
+        List<Donacion> seleccionadas = new ArrayList<>();
         int volumenAcumulado = 0;
 
         for (Donacion muestra : muestrasOrdenadas) {
-            idsSeleccionados.add(muestra.getId());
+            seleccionadas.add(muestra);
             volumenAcumulado += muestra.getVolumenMl();
             if (volumenAcumulado >= volumenSolicitadoMl) {
                 break;
@@ -136,6 +150,6 @@ public class SolicitudEntregaService {
             throw new IllegalStateException("Stock insuficiente para el grupo sanguíneo " + grupoBuscado);
         }
 
-        return idsSeleccionados.toArray(new String[0]);
+        return seleccionadas;
     }
 }
