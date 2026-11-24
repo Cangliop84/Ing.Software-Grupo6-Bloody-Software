@@ -1,5 +1,10 @@
 package org.example;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * Servicio encargado de validar y generar solicitudes de entrega de sangre (Sprint 02 - T01).
  */
@@ -90,5 +95,47 @@ public class SolicitudEntregaService {
         }
 
         return new ResultadoOperacion(true, 201, "Solicitud de entrega generada correctamente.", solicitud);
+    }
+
+    /**
+     * Busca en la base de datos las muestras del grupo sanguíneo solicitado, las ordena
+     * de manera ascendente por fecha de caducidad (FIFO) y acumula volúmenes hasta cubrir la solicitud.
+     * @param grupoSanguineo Grupo sanguíneo requerido.
+     * @param volumenSolicitadoMl Volumen total requerido en mililitros.
+     * @return Arreglo con los ID de las muestras seleccionadas ordenadas de menor a mayor fecha de caducidad.
+     */
+    public String[] seleccionarMuestrasFifo(String grupoSanguineo, int volumenSolicitadoMl) {
+        if (grupoSanguineo == null || grupoSanguineo.trim().isEmpty()) {
+            throw new IllegalArgumentException("El grupo sanguíneo es obligatorio.");
+        }
+        if (volumenSolicitadoMl <= 0) {
+            throw new IllegalArgumentException("El volumen solicitado debe ser mayor a 0.");
+        }
+
+        String grupoBuscado = grupoSanguineo.trim();
+        Inventario inventario = new Inventario();
+        List<Donacion> stock = inventario.obtenerInventario();
+
+        List<Donacion> muestrasOrdenadas = stock.stream()
+                .filter(d -> d.getGrupoSanguineo() != null && d.getGrupoSanguineo().equalsIgnoreCase(grupoBuscado))
+                .sorted(Comparator.comparing(Donacion::getFechaCaducidad))
+                .toList();
+
+        List<String> idsSeleccionados = new ArrayList<>();
+        int volumenAcumulado = 0;
+
+        for (Donacion muestra : muestrasOrdenadas) {
+            idsSeleccionados.add(muestra.getId());
+            volumenAcumulado += muestra.getVolumenMl();
+            if (volumenAcumulado >= volumenSolicitadoMl) {
+                break;
+            }
+        }
+
+        if (volumenAcumulado < volumenSolicitadoMl) {
+            throw new IllegalStateException("Stock insuficiente para el grupo sanguíneo " + grupoBuscado);
+        }
+
+        return idsSeleccionados.toArray(new String[0]);
     }
 }
