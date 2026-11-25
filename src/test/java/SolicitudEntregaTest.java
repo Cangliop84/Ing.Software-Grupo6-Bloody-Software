@@ -1,4 +1,10 @@
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.example.SolicitudEntregaEndpoint;
 import org.example.SolicitudEntregaService;
 import org.junit.jupiter.api.Test;
@@ -7,6 +13,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -131,6 +139,54 @@ public class SolicitudEntregaTest {
                     "Una petición GET al endpoint debe retornar HTTP 405 Method Not Allowed.");
         } finally {
             endpoint.detener();
+        }
+    }
+
+    /**
+     * Test 1 (T05): Dado un stock con una unidad que vence en 2 días y otra en 10 días,
+     * cuando se procesa la solicitud de 1 unidad, entonces el algoritmo retorna exclusivamente
+     * el ID de la unidad de 2 días.
+     */
+    @Test
+    public void testSeleccionarMuestrasFifoUnidadMasProximaAVencer_Test1_T05() {
+        String uriMongo = "mongodb://rdominguez2024_db_user:Jose123@ac-15adclh-shard-00-00.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-01.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-02.ddnbvei.mongodb.net:27017/?ssl=true&replicaSet=atlas-t74n7s-shard-0&authSource=admin";
+        String grupoPrueba = "AB-";
+        int volumenUnidad = 450;
+
+        ObjectId idVenceEn2Dias = new ObjectId();
+        ObjectId idVenceEn10Dias = new ObjectId();
+
+        try (MongoClient mongoClient = MongoClients.create(uriMongo)) {
+            MongoDatabase database = mongoClient.getDatabase("banco_sangre");
+            MongoCollection<Document> collection = database.getCollection("donaciones");
+
+            Document muestra10Dias = new Document("_id", idVenceEn10Dias)
+                    .append("nombreDonante", "Donante Test 10 Dias")
+                    .append("volumenMl", volumenUnidad)
+                    .append("grupoSanguineo", grupoPrueba)
+                    .append("fechaCaducidad", LocalDate.now().plusDays(10).toString());
+
+            Document muestra2Dias = new Document("_id", idVenceEn2Dias)
+                    .append("nombreDonante", "Donante Test 2 Dias")
+                    .append("volumenMl", volumenUnidad)
+                    .append("grupoSanguineo", grupoPrueba)
+                    .append("fechaCaducidad", LocalDate.now().plusDays(2).toString());
+
+            collection.insertMany(List.of(muestra10Dias, muestra2Dias));
+
+            SolicitudEntregaService service = new SolicitudEntregaService();
+            String[] resultado = service.seleccionarMuestrasFifo(grupoPrueba, volumenUnidad);
+
+            assertNotNull(resultado);
+            assertEquals(1, resultado.length, "Debe retornar exactamente 1 muestra.");
+            assertEquals(idVenceEn2Dias.toHexString(), resultado[0],
+                    "Debe seleccionar exclusivamente la muestra que vence en 2 días.");
+        } finally {
+            try (MongoClient mongoClient = MongoClients.create(uriMongo)) {
+                MongoDatabase database = mongoClient.getDatabase("banco_sangre");
+                MongoCollection<Document> collection = database.getCollection("donaciones");
+                collection.deleteMany(Filters.in("_id", idVenceEn2Dias, idVenceEn10Dias));
+            }
         }
     }
 }
