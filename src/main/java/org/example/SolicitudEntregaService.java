@@ -1,5 +1,16 @@
 package org.example;
 
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
+import org.bson.Document;
+import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -9,6 +20,10 @@ import java.util.stream.Collectors;
  * Servicio encargado de validar y generar solicitudes de entrega de sangre (Sprint 02 - T01).
  */
 public class SolicitudEntregaService {
+
+    private static final String MONGO_URI = "mongodb://rdominguez2024_db_user:Jose123@ac-15adclh-shard-00-00.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-01.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-02.ddnbvei.mongodb.net:27017/?ssl=true&replicaSet=atlas-t74n7s-shard-0&authSource=admin";
+    private static final String DATABASE_NAME = "banco_sangre";
+    private static final String COLLECTION_NAME = "solicitudes_entrega";
 
     public static class ResultadoOperacion {
         private final boolean exito;
@@ -95,6 +110,65 @@ public class SolicitudEntregaService {
         }
 
         return new ResultadoOperacion(true, 201, "Solicitud de entrega generada correctamente.", solicitud);
+    }
+
+    public ResultadoOperacion despacharSolicitud(String idSolicitud) {
+        return despacharSolicitud(idSolicitud, true);
+    }
+
+    public ResultadoOperacion despacharSolicitud(String idSolicitud, boolean persistirEnBd) {
+        if (idSolicitud == null || idSolicitud.trim().isEmpty()) {
+            return new ResultadoOperacion(false, 404, "Solicitud no encontrada: el ID es obligatorio.", null);
+        }
+
+        String idLimpio = idSolicitud.trim();
+        if (!persistirEnBd) {
+            SolicitudEntrega simulada = new SolicitudEntrega("O+", 450, LocalDateTime.now(), "Despachado");
+            return new ResultadoOperacion(true, 200, "Solicitud actualizada a Despachado.", simulada);
+        }
+
+        try (MongoClient mongoClient = MongoClients.create(MONGO_URI)) {
+            MongoDatabase database = mongoClient.getDatabase(DATABASE_NAME);
+            MongoCollection<Document> collection = database.getCollection(COLLECTION_NAME);
+
+            Bson filtro = ObjectId.isValid(idLimpio)
+                    ? Filters.eq("_id", new ObjectId(idLimpio))
+                    : Filters.eq("id", idLimpio);
+
+            Document docActual = collection.find(filtro).first();
+            if (docActual == null) {
+                return new ResultadoOperacion(false, 404, "No existe una solicitud con el ID: " + idLimpio, null);
+            }
+
+            String estadoActual = docActual.getString("estado");
+            if (!"Reservado".equalsIgnoreCase(estadoActual)) {
+                return new ResultadoOperacion(
+                        false,
+                        409,
+                        "La solicitud no está en estado 'Reservado' (estado actual: " + estadoActual + ").",
+                        null
+                );
+            }
+
+            collection.updateOne(filtro, Updates.set("estado", "Despachado"));
+            Document docActualizado = collection.find(filtro).first();
+
+            String tipoSangre = docActualizado != null && docActualizado.getString("tipoSangre") != null
+                    ? docActualizado.getString("tipoSangre")
+                    : docActual.getString("tipoSangre");
+            Integer volumenObj = docActualizado != null && docActualizado.getInteger("volumenRequeridoMl") != null
+                    ? docActualizado.getInteger("volumenRequeridoMl")
+                    : docActual.getInteger("volumenRequeridoMl");
+            int volumen = volumenObj != null ? volumenObj : 0;
+
+            SolicitudEntrega solicitudActualizada = new SolicitudEntrega(
+                    tipoSangre, volumen, LocalDateTime.now(), "Despachado"
+            );
+
+            return new ResultadoOperacion(true, 200, "Solicitud actualizada a Despachado.", solicitudActualizada);
+        } catch (Exception e) {
+            return new ResultadoOperacion(false, 500, "Error interno al despachar la solicitud: " + e.getMessage(), null);
+        }
     }
 
     /**
