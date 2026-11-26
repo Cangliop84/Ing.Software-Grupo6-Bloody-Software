@@ -189,4 +189,75 @@ public class SolicitudEntregaTest {
             }
         }
     }
+    /**
+     * Test 2 (T05): Dado que se solicitan 2 unidades y hay 5 disponibles con distintas fechas,
+     * el algoritmo retorna un array con los IDs de las 2 más antiguas, ordenadas de menor a mayor fecha.
+     */
+    @Test
+    public void testSeleccionarMuestrasFifoDosUnidadesMasAntiguasOrdenadas_Test2_T05() {
+        String uriMongo = "mongodb://rdominguez2024_db_user:Jose123@ac-15adclh-shard-00-00.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-01.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-02.ddnbvei.mongodb.net:27017/?ssl=true&replicaSet=atlas-t74n7s-shard-0&authSource=admin";
+        String grupoPrueba = "AB-";
+        int volumenUnidad = 450;
+        int volumenDosUnidades = volumenUnidad * 2;
+
+        ObjectId idVenceEn15Dias = new ObjectId();
+        ObjectId idVenceEn3Dias = new ObjectId();
+        ObjectId idVenceEn25Dias = new ObjectId();
+        ObjectId idVenceEn7Dias = new ObjectId();
+        ObjectId idVenceEn12Dias = new ObjectId();
+
+        try (MongoClient mongoClient = MongoClients.create(uriMongo)) {
+            MongoDatabase database = mongoClient.getDatabase("banco_sangre");
+            MongoCollection<Document> collection = database.getCollection("donaciones");
+
+            // Insertamos 5 muestras desordenadas con distintas fechas de caducidad
+            List<Document> muestras = List.of(
+                    new Document("_id", idVenceEn15Dias)
+                            .append("nombreDonante", "Donante Test 15 Dias")
+                            .append("volumenMl", volumenUnidad)
+                            .append("grupoSanguineo", grupoPrueba)
+                            .append("fechaCaducidad", LocalDate.now().plusDays(15).toString()),
+                    new Document("_id", idVenceEn3Dias)
+                            .append("nombreDonante", "Donante Test 3 Dias")
+                            .append("volumenMl", volumenUnidad)
+                            .append("grupoSanguineo", grupoPrueba)
+                            .append("fechaCaducidad", LocalDate.now().plusDays(3).toString()),
+                    new Document("_id", idVenceEn25Dias)
+                            .append("nombreDonante", "Donante Test 25 Dias")
+                            .append("volumenMl", volumenUnidad)
+                            .append("grupoSanguineo", grupoPrueba)
+                            .append("fechaCaducidad", LocalDate.now().plusDays(25).toString()),
+                    new Document("_id", idVenceEn7Dias)
+                            .append("nombreDonante", "Donante Test 7 Dias")
+                            .append("volumenMl", volumenUnidad)
+                            .append("grupoSanguineo", grupoPrueba)
+                            .append("fechaCaducidad", LocalDate.now().plusDays(7).toString()),
+                    new Document("_id", idVenceEn12Dias)
+                            .append("nombreDonante", "Donante Test 12 Dias")
+                            .append("volumenMl", volumenUnidad)
+                            .append("grupoSanguineo", grupoPrueba)
+                            .append("fechaCaducidad", LocalDate.now().plusDays(12).toString())
+            );
+
+            collection.insertMany(muestras);
+
+            SolicitudEntregaService service = new SolicitudEntregaService();
+            String[] resultado = service.seleccionarMuestrasFifo(grupoPrueba, volumenDosUnidades);
+
+            assertNotNull(resultado, "El arreglo retornado no debe ser nulo.");
+            assertEquals(2, resultado.length, "Debe retornar exactamente 2 muestras.");
+            assertArrayEquals(
+                    new String[]{idVenceEn3Dias.toHexString(), idVenceEn7Dias.toHexString()},
+                    resultado,
+                    "Debe retornar los IDs de las 2 muestras más próximas a vencer ordenadas de menor a mayor fecha."
+            );
+        } finally {
+            try (MongoClient mongoClient = MongoClients.create(uriMongo)) {
+                MongoDatabase database = mongoClient.getDatabase("banco_sangre");
+                MongoCollection<Document> collection = database.getCollection("donaciones");
+                collection.deleteMany(Filters.in("_id",
+                        idVenceEn15Dias, idVenceEn3Dias, idVenceEn25Dias, idVenceEn7Dias, idVenceEn12Dias));
+            }
+        }
+    }
 }
