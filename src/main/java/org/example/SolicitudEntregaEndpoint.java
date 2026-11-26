@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
  */
 public class SolicitudEntregaEndpoint {
     public static final String RUTA_SOLICITUDES = "/api/solicitudes";
+    public static final String RUTA_DESPACHO = "/api/solicitudes/despachar";
 
     private final SolicitudEntregaService service;
     private final boolean persistirEnBd;
@@ -39,6 +40,7 @@ public class SolicitudEntregaEndpoint {
     public void iniciar(int puerto) throws IOException {
         server = HttpServer.create(new InetSocketAddress(puerto), 0);
         server.createContext(RUTA_SOLICITUDES, this::manejarSolicitudHttp);
+        server.createContext(RUTA_DESPACHO, this::manejarDespachoHttp);
         server.setExecutor(null);
         server.start();
     }
@@ -70,6 +72,52 @@ public class SolicitudEntregaEndpoint {
         SolicitudEntregaService.ResultadoOperacion resultado = procesarPost(cuerpoRequest);
         String jsonRespuesta = construirJsonRespuesta(resultado);
         enviarRespuestaJson(exchange, resultado.getCodigoHttp(), jsonRespuesta);
+    }
+
+    private void manejarDespachoHttp(HttpExchange exchange) throws IOException {
+        String metodo = exchange.getRequestMethod();
+        if (!"POST".equalsIgnoreCase(metodo) && !"PUT".equalsIgnoreCase(metodo)) {
+            String jsonError = new Document("exito", false)
+                    .append("mensaje", "Método HTTP no permitido. Use POST o PUT.")
+                    .toJson();
+            enviarRespuestaJson(exchange, 405, jsonError);
+            return;
+        }
+
+        String cuerpoRequest;
+        try (InputStream is = exchange.getRequestBody()) {
+            cuerpoRequest = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        SolicitudEntregaService.ResultadoOperacion resultado = procesarDespacho(cuerpoRequest);
+        String jsonRespuesta = construirJsonRespuesta(resultado);
+        enviarRespuestaJson(exchange, resultado.getCodigoHttp(), jsonRespuesta);
+    }
+
+    /**
+     * Procesa el cuerpo JSON de una petición de despacho hacia {@value #RUTA_DESPACHO}.
+     *
+     * @param jsonBody Cuerpo JSON con el identificador de solicitud ("idSolicitud").
+     * @return Resultado de la operación con código HTTP (200, 400, 404, 409 o 500).
+     */
+    public SolicitudEntregaService.ResultadoOperacion procesarDespacho(String jsonBody) {
+        if (jsonBody == null || jsonBody.trim().isEmpty()) {
+            return new SolicitudEntregaService.ResultadoOperacion(
+                    false, 400, "El cuerpo del request es nulo o está vacío.", null);
+        }
+
+        Document body;
+        try {
+            body = Document.parse(jsonBody);
+        } catch (Exception e) {
+            return new SolicitudEntregaService.ResultadoOperacion(
+                    false, 400, "El request no tiene un formato JSON válido.", null);
+        }
+
+        Object rawId = body.containsKey("idSolicitud") ? body.get("idSolicitud") : body.get("id");
+        String idSolicitud = rawId != null ? rawId.toString() : null;
+
+        return service.despacharSolicitud(idSolicitud, persistirEnBd);
     }
 
     /**
