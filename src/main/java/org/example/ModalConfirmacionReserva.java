@@ -21,14 +21,35 @@ public class ModalConfirmacionReserva extends JDialog {
     private JLabel lblResumenReserva;
     private JButton btnCerrar;
 
+    /**
+     * Crea el modal de confirmación sin callback de actualización posterior.
+     *
+     * @param owner              Ventana padre del diálogo modal.
+     * @param muestrasReservadas Lista de muestras seleccionadas y reservadas.
+     */
     public ModalConfirmacionReserva(Frame owner, List<Donacion> muestrasReservadas) {
         this(owner, muestrasReservadas, (Runnable) null);
     }
 
+    /**
+     * Crea el modal de confirmación conectado a la vista principal de inventario,
+     * refrescando el stock al presionar "Cerrar".
+     *
+     * @param owner              Ventana padre del diálogo modal.
+     * @param muestrasReservadas Lista de muestras seleccionadas y reservadas.
+     * @param vistaInventario    Vista principal del inventario a actualizar al cerrar.
+     */
     public ModalConfirmacionReserva(Frame owner, List<Donacion> muestrasReservadas, TablaInventario vistaInventario) {
-        this(owner, muestrasReservadas, vistaInventario != null ? vistaInventario::cargarDatosDesdeMongoDB : null);
+        this(owner, muestrasReservadas, vistaInventario != null ? vistaInventario::actualizarStockDesdeServicio : null);
     }
 
+    /**
+     * Crea el modal de confirmación con una acción personalizada al cerrar.
+     *
+     * @param owner              Ventana padre del diálogo modal.
+     * @param muestrasReservadas Lista de muestras seleccionadas y reservadas.
+     * @param alCerrarCallback   Acción ejecutada al presionar el botón "Cerrar".
+     */
     public ModalConfirmacionReserva(Frame owner, List<Donacion> muestrasReservadas, Runnable alCerrarCallback) {
         super(owner, "Confirmación de Reserva de Muestras", true);
         this.muestrasReservadas = muestrasReservadas != null ? muestrasReservadas : Collections.emptyList();

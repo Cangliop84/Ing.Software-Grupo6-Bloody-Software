@@ -6,6 +6,7 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.List;
 
 /**
  * Formulario de solicitud de entrega de sangre (US03 - T02).
@@ -30,14 +31,20 @@ public class FormularioSolicitudEntrega extends JFrame {
     private JButton btnLimpiar;
 
     private final SolicitudEntregaService servicioSolicitud;
+    private final TablaInventario vistaInventario;
     private boolean modoCompacto = false;
 
     public FormularioSolicitudEntrega() {
-        this(new SolicitudEntregaService());
+        this(new SolicitudEntregaService(), null);
     }
 
     public FormularioSolicitudEntrega(SolicitudEntregaService servicioSolicitud) {
+        this(servicioSolicitud, null);
+    }
+
+    public FormularioSolicitudEntrega(SolicitudEntregaService servicioSolicitud, TablaInventario vistaInventario) {
         this.servicioSolicitud = servicioSolicitud;
+        this.vistaInventario = vistaInventario;
         setTitle("Solicitud de Entrega de Sangre");
         setSize(520, 320);
         setMinimumSize(new Dimension(320, 260));
@@ -193,6 +200,16 @@ public class FormularioSolicitudEntrega extends JFrame {
         if (resultado.isExito()) {
             lblMensajeEstado.setForeground(new Color(0, 128, 0));
             lblMensajeEstado.setText(resultado.getMensaje());
+
+            try {
+                int volumenSolicitado = Integer.parseInt(volumen.trim());
+                List<Donacion> muestrasReservadas = servicioSolicitud.seleccionarMuestrasDetalleFifo(tipo, volumenSolicitado);
+                ModalConfirmacionReserva modal = new ModalConfirmacionReserva(this, muestrasReservadas, vistaInventario);
+                modal.setVisible(true);
+            } catch (Exception ignored) {
+                // Si aún no hay stock suficiente o conexión disponible para detallar la reserva, se mantiene la confirmación
+            }
+
             limpiarFormulario();
         } else {
             lblMensajeEstado.setForeground(Color.RED);

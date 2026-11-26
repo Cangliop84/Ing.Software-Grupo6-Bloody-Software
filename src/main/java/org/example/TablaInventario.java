@@ -398,6 +398,55 @@ public void limpiarTabla() {
         }).start();
     }
     /**
+     * Reemplaza las filas visibles de la tabla con la lista de donaciones indicada,
+     * manteniendo intactos el ordenador y el filtro seleccionado.
+     *
+     * @param donaciones Lista actualizada de donaciones disponibles en inventario.
+     */
+    @SuppressWarnings("unchecked")
+    public void reemplazarStockEnTabla(java.util.List<Donacion> donaciones) {
+        Object filtroSeleccionado = cmbFiltroGrupoSanguineo.getSelectedItem();
+        javax.swing.RowSorter<?> sorterGuardado = tablaStock.getRowSorter();
+        tablaStock.setRowSorter(null);
+        tablaStock.clearSelection();
+
+        limpiarTabla();
+
+        if (donaciones != null) {
+            for (Donacion d : donaciones) {
+                agregarFilaInventario(
+                        d.getNombreDonante() != null ? d.getNombreDonante() : "Sin nombre",
+                        d.getGrupoSanguineo() != null ? d.getGrupoSanguineo() : "Desconocido",
+                        d.getVolumenMl(),
+                        d.getFechaCaducidad() != null ? d.getFechaCaducidad().toString() : "Sin fecha"
+                );
+            }
+        }
+
+        tablaStock.setRowSorter((javax.swing.table.TableRowSorter<? extends javax.swing.table.TableModel>) sorterGuardado);
+        cmbFiltroGrupoSanguineo.setSelectedItem("Todos");
+        if (filtroSeleccionado != null) {
+            cmbFiltroGrupoSanguineo.setSelectedItem(filtroSeleccionado);
+        }
+        actualizarResumenStock();
+    }
+
+    /**
+     * Consulta el stock actualizado desde {@link Inventario} en segundo plano
+     * y refresca la vista principal de la tabla (usado al cerrar modales de reserva).
+     */
+    public void actualizarStockDesdeServicio() {
+        new Thread(() -> {
+            try {
+                java.util.List<Donacion> stockActualizado = new Inventario().obtenerInventario();
+                SwingUtilities.invokeLater(() -> reemplazarStockEnTabla(stockActualizado));
+            } catch (Exception ignored) {
+                // Si no hay conexión en entorno local/test, se conserva el estado actual
+            }
+        }).start();
+    }
+
+    /**
      * Aplica el filtro por grupo sanguíneo en la tabla.
      * Si se selecciona Todos, muestra todas las filas.
      * De lo contrario, filtra la columna de grupo sanguíneo por coincidencia exacta.

@@ -11,7 +11,7 @@ public class Main {
             TablaInventario inventario = new TablaInventario();
             inventario.setVisible(true);
 
-            FormularioSolicitudEntrega solicitud = new FormularioSolicitudEntrega();
+            FormularioSolicitudEntrega solicitud = new FormularioSolicitudEntrega(new SolicitudEntregaService(), inventario);
             solicitud.setVisible(true);
         });
     }
