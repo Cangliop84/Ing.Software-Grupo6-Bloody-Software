@@ -184,6 +184,71 @@ public class SolicitudEntregaService {
                 .toArray(String[]::new);
     }
 
+    private static final String COLECCION_DONACIONES = "donaciones";
+
+    /**
+     * Actualiza en MongoDB las unidades seleccionadas a estado "Reservado" e incorpora
+     * el ID del hospital solicitante en cada documento, evitando doble asignación.
+     *
+     * @param muestras   Unidades seleccionadas por el algoritmo de selección.
+     * @param idHospital Identificador del hospital que solicita las unidades.
+     */
+    public void reservarMuestrasEnMongo(List<Donacion> muestras, String idHospital) {
+        reservarMuestrasEnMongo(muestras, idHospital, true);
+    }
+
+    public void reservarMuestrasEnMongo(List<Donacion> muestras, String idHospital, boolean persistirEnBd) {
+        if (muestras == null || muestras.isEmpty()) {
+            throw new IllegalArgumentException("Debe indicar al menos una muestra para reservar.");
+        }
+        if (idHospital == null || idHospital.trim().isEmpty()) {
+            throw new IllegalArgumentException("El ID del hospital es obligatorio.");
+        }
+        if (!persistirEnBd) {
+            return;
+        }
+
+        String hospitalLimpio = idHospital.trim();
+
+        try (MongoClient mongoClient = MongoClients.create(MONGO_URI)) {
+            MongoDatabase database = mongoClient.getDatabase(DATABASE_NAME);
+            MongoCollection<Document> coleccionDonaciones = database.getCollection(COLECCION_DONACIONES);
+
+            for (Donacion muestra : muestras) {
+                if (muestra == null || muestra.getId() == null || muestra.getId().trim().isEmpty()) {
+                    throw new IllegalArgumentException("Cada muestra debe tener un ID válido para ser reservada.");
+                }
+
+                String idMuestra = muestra.getId().trim();
+                Bson filtroId = ObjectId.isValid(idMuestra)
+                        ? Filters.eq("_id", new ObjectId(idMuestra))
+                        : Filters.eq("id", idMuestra);
+
+                // Evita doble asignación si ya fue reservada o despachada
+                Bson filtroDisponible = Filters.and(
+                        filtroId,
+                        Filters.nin("estado", "Reservado", "Despachado")
+                );
+
+                Bson actualizacion = Updates.combine(
+                        Updates.set("estado", "Reservado"),
+                        Updates.set("idHospital", hospitalLimpio)
+                );
+
+                var resultado = coleccionDonaciones.updateOne(filtroDisponible, actualizacion);
+                if (resultado.getMatchedCount() == 0) {
+                    throw new IllegalStateException(
+                            "No se pudo reservar la muestra " + idMuestra + " (no encontrada o no disponible)."
+                    );
+                }
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al actualizar estado a Reservado en MongoDB: " + e.getMessage(), e);
+        }
+    }
+
     /**
      * Selecciona bajo criterio FIFO las muestras completas (con fechas y volúmenes) que cubren
      * el volumen solicitado para mostrar su detalle al usuario.

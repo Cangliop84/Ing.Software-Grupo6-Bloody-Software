@@ -203,11 +203,19 @@ public class FormularioSolicitudEntrega extends JFrame {
 
             try {
                 int volumenSolicitado = Integer.parseInt(volumen.trim());
-                List<Donacion> muestrasReservadas = servicioSolicitud.seleccionarMuestrasDetalleFifo(tipo, volumenSolicitado);
-                ModalConfirmacionReserva modal = new ModalConfirmacionReserva(this, muestrasReservadas, vistaInventario);
+                List<Donacion> muestrasReservadas =
+                        servicioSolicitud.seleccionarMuestrasDetalleFifo(tipo, volumenSolicitado);
+
+                // Usa el ID de hospital/solicitud disponible o un identificador por defecto si aún no hay campo de hospital en el formulario
+                String idHospital = "HOSP-DEFAULT";
+                servicioSolicitud.reservarMuestrasEnMongo(muestrasReservadas, idHospital);
+
+                ModalConfirmacionReserva modal =
+                        new ModalConfirmacionReserva(this, muestrasReservadas, vistaInventario);
                 modal.setVisible(true);
-            } catch (Exception ignored) {
-                // Si aún no hay stock suficiente o conexión disponible para detallar la reserva, se mantiene la confirmación
+            } catch (Exception ex) {
+                lblMensajeEstado.setForeground(Color.RED);
+                lblMensajeEstado.setText("Error al reservar muestras: " + ex.getMessage());
             }
 
             limpiarFormulario();

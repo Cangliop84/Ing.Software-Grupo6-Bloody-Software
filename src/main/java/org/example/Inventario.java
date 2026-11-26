@@ -29,6 +29,11 @@ public class Inventario {
             MongoCollection<Document> collection = database.getCollection(COLLECTION_NAME);
 
             for (Document doc : collection.find()) {
+                String estado = doc.getString("estado");
+                if (estado != null && !"Disponible".equalsIgnoreCase(estado.trim())) {
+                    continue;
+                }
+
                 Object rawId = doc.get("_id");
                 String id = rawId != null ? rawId.toString() : null;
                 String nombre = doc.getString("nombreDonante");
