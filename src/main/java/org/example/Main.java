@@ -13,6 +13,12 @@ public class Main {
 
             FormularioSolicitudEntrega solicitud = new FormularioSolicitudEntrega(new SolicitudEntregaService(), inventario);
             solicitud.setVisible(true);
+
+            VistaDespachoSolicitudes despacho = new VistaDespachoSolicitudes(
+                    "http://localhost:8080" + SolicitudEntregaEndpoint.RUTA_DESPACHO,
+                    inventario
+            );
+            despacho.setVisible(true);
         });
     }
 }
