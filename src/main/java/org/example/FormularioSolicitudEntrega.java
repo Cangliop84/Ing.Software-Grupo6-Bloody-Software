@@ -1,11 +1,19 @@
 package org.example;
 
+import org.bson.Document;
+
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -18,6 +26,9 @@ public class FormularioSolicitudEntrega extends JFrame {
             "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
     };
     private static final int UMBRAL_ANCHO_COMPACTO = 460;
+    private static final String URL_ENDPOINT_DEFECTO = "http://localhost:8080/api/solicitudes";
+    private static final Duration TIMEOUT_CONEXION = Duration.ofSeconds(3);
+    private static final Duration TIMEOUT_RESPUESTA = Duration.ofSeconds(5);
 
     private JPanel panelTarjeta;
     private JPanel panelCampos;
@@ -32,19 +43,35 @@ public class FormularioSolicitudEntrega extends JFrame {
 
     private final SolicitudEntregaService servicioSolicitud;
     private final TablaInventario vistaInventario;
+    private final String urlEndpoint;
+    private final HttpClient httpClient;
     private boolean modoCompacto = false;
 
     public FormularioSolicitudEntrega() {
-        this(new SolicitudEntregaService(), null);
+        this(new SolicitudEntregaService(), null, URL_ENDPOINT_DEFECTO);
     }
 
     public FormularioSolicitudEntrega(SolicitudEntregaService servicioSolicitud) {
-        this(servicioSolicitud, null);
+        this(servicioSolicitud, null, URL_ENDPOINT_DEFECTO);
     }
 
     public FormularioSolicitudEntrega(SolicitudEntregaService servicioSolicitud, TablaInventario vistaInventario) {
+        this(servicioSolicitud, vistaInventario, URL_ENDPOINT_DEFECTO);
+    }
+
+    public FormularioSolicitudEntrega(
+            SolicitudEntregaService servicioSolicitud,
+            TablaInventario vistaInventario,
+            String urlEndpoint
+    ) {
         this.servicioSolicitud = servicioSolicitud;
         this.vistaInventario = vistaInventario;
+        this.urlEndpoint = (urlEndpoint != null && !urlEndpoint.trim().isEmpty())
+                ? urlEndpoint.trim()
+                : URL_ENDPOINT_DEFECTO;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(TIMEOUT_CONEXION)
+                .build();
         setTitle("Solicitud de Entrega de Sangre");
         setSize(520, 320);
         setMinimumSize(new Dimension(320, 260));
@@ -72,7 +99,7 @@ public class FormularioSolicitudEntrega extends JFrame {
 
         lblTipoSangre = new JLabel("Tipo de sangre:");
         cmbTipoSangre = new JComboBox<>(GRUPOS_SANGUINEOS);
-        cmbTipoSangre.setSelectedIndex(-1); // Sin selección inicial hasta que el usuario elija
+        cmbTipoSangre.setSelectedIndex(-1);
 
         lblVolumen = new JLabel("Volumen (ml):");
         txtVolumenMl = new JTextField(12);
@@ -131,14 +158,12 @@ public class FormularioSolicitudEntrega extends JFrame {
     private void reconstruirPanelCampos(boolean compacto) {
         panelCampos.removeAll();
         if (compacto) {
-            // Vista estrecha / móvil: etiqueta arriba y control abajo en una columna
             panelCampos.setLayout(new GridLayout(4, 1, 4, 4));
             panelCampos.add(lblTipoSangre);
             panelCampos.add(cmbTipoSangre);
             panelCampos.add(lblVolumen);
             panelCampos.add(txtVolumenMl);
         } else {
-            // Vista escritorio: dos columnas alineadas
             panelCampos.setLayout(new GridLayout(2, 2, 10, 10));
             panelCampos.add(lblTipoSangre);
             panelCampos.add(cmbTipoSangre);
@@ -191,37 +216,65 @@ public class FormularioSolicitudEntrega extends JFrame {
 
     private void enviarSolicitud() {
         Object seleccionado = cmbTipoSangre.getSelectedItem();
-        String tipo = seleccionado != null ? seleccionado.toString() : "";
-        String volumen = txtVolumenMl.getText();
+        String tipo = seleccionado != null ? seleccionado.toString().trim() : "";
+        String volumen = txtVolumenMl.getText().trim();
 
-        SolicitudEntregaService.ResultadoOperacion resultado =
-                servicioSolicitud.generarSolicitud(tipo, volumen, true);
+        String payload = new Document("tipoSangre", tipo)
+                .append("volumenRequeridoMl", volumen)
+                .toJson();
 
-        if (resultado.isExito()) {
-            lblMensajeEstado.setForeground(new Color(0, 128, 0));
-            lblMensajeEstado.setText(resultado.getMensaje());
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(urlEndpoint))
+                .timeout(TIMEOUT_RESPUESTA)
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
+                .build();
 
-            try {
-                int volumenSolicitado = Integer.parseInt(volumen.trim());
-                List<Donacion> muestrasReservadas =
-                        servicioSolicitud.seleccionarMuestrasDetalleFifo(tipo, volumenSolicitado);
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            Document body = (response.body() != null && !response.body().trim().isEmpty())
+                    ? Document.parse(response.body())
+                    : new Document();
 
-                // Usa el ID de hospital/solicitud disponible o un identificador por defecto si aún no hay campo de hospital en el formulario
-                String idHospital = "HOSP-DEFAULT";
-                servicioSolicitud.reservarMuestrasEnMongo(muestrasReservadas, idHospital);
+            boolean exito = body.containsKey("exito")
+                    ? body.getBoolean("exito", false)
+                    : (response.statusCode() >= 200 && response.statusCode() < 300);
 
-                ModalConfirmacionReserva modal =
-                        new ModalConfirmacionReserva(this, muestrasReservadas, vistaInventario);
-                modal.setVisible(true);
-            } catch (Exception ex) {
-                lblMensajeEstado.setForeground(Color.RED);
-                lblMensajeEstado.setText("Error al reservar muestras: " + ex.getMessage());
+            String mensaje = body.getString("mensaje");
+            if (mensaje == null || mensaje.trim().isEmpty()) {
+                mensaje = exito
+                        ? "Solicitud de entrega generada correctamente."
+                        : "Error al procesar la solicitud (HTTP " + response.statusCode() + ").";
             }
 
-            limpiarFormulario();
-        } else {
+            if (exito) {
+                lblMensajeEstado.setForeground(new Color(0, 128, 0));
+                lblMensajeEstado.setText(mensaje);
+
+                try {
+                    int volumenSolicitado = Integer.parseInt(volumen);
+                    List<Donacion> muestrasReservadas =
+                            servicioSolicitud.seleccionarMuestrasDetalleFifo(tipo, volumenSolicitado);
+
+                    String idHospital = "HOSP-DEFAULT";
+                    servicioSolicitud.reservarMuestrasEnMongo(muestrasReservadas, idHospital);
+
+                    ModalConfirmacionReserva modal =
+                            new ModalConfirmacionReserva(this, muestrasReservadas, vistaInventario);
+                    modal.setVisible(true);
+                } catch (Exception ex) {
+                    lblMensajeEstado.setForeground(Color.RED);
+                    lblMensajeEstado.setText("Error al reservar muestras: " + ex.getMessage());
+                }
+
+                limpiarFormulario();
+            } else {
+                lblMensajeEstado.setForeground(Color.RED);
+                lblMensajeEstado.setText(mensaje);
+            }
+        } catch (Exception ex) {
             lblMensajeEstado.setForeground(Color.RED);
-            lblMensajeEstado.setText(resultado.getMensaje());
+            lblMensajeEstado.setText("Error de conexión con el servidor: " + ex.getMessage());
         }
     }
 
@@ -232,7 +285,6 @@ public class FormularioSolicitudEntrega extends JFrame {
         actualizarEstadoBotonSolicitar();
     }
 
-    // Getters útiles para pruebas unitarias / UI
     public JComboBox<String> getCmbTipoSangre() {
         return cmbTipoSangre;
     }
@@ -251,5 +303,9 @@ public class FormularioSolicitudEntrega extends JFrame {
 
     public JPanel getPanelTarjeta() {
         return panelTarjeta;
+    }
+
+    public JLabel getLblMensajeEstado() {
+        return lblMensajeEstado;
     }
 }
