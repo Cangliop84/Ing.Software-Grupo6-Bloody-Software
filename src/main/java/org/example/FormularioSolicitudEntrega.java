@@ -1,11 +1,13 @@
 package org.example;
 
-import org.bson.Document;
-
-import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.net.URI;
@@ -16,11 +18,20 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
-/**
- * Formulario de solicitud de entrega de sangre (US03 - T02).
- * Incluye selector de tipo de sangre, input de volumen en ml, validación del botón solicitar
- * y ajuste responsivo del layout.
- */
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+
+import org.bson.Document;
+
 public class FormularioSolicitudEntrega extends JFrame {
     private static final String[] GRUPOS_SANGUINEOS = {
             "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
@@ -45,6 +56,7 @@ public class FormularioSolicitudEntrega extends JFrame {
     private final TablaInventario vistaInventario;
     private final String urlEndpoint;
     private final HttpClient httpClient;
+    private ModalErrorConexion ultimoModalError;
     private boolean modoCompacto = false;
 
     public FormularioSolicitudEntrega() {
@@ -250,6 +262,7 @@ public class FormularioSolicitudEntrega extends JFrame {
             if (exito) {
                 lblMensajeEstado.setForeground(new Color(0, 128, 0));
                 lblMensajeEstado.setText(mensaje);
+                mostrarAlertaConfirmacion(mensaje);
 
                 try {
                     int volumenSolicitado = Integer.parseInt(volumen);
@@ -259,9 +272,7 @@ public class FormularioSolicitudEntrega extends JFrame {
                     String idHospital = "HOSP-DEFAULT";
                     servicioSolicitud.reservarMuestrasEnMongo(muestrasReservadas, idHospital);
 
-                    ModalConfirmacionReserva modal =
-                            new ModalConfirmacionReserva(this, muestrasReservadas, vistaInventario);
-                    modal.setVisible(true);
+                    mostrarModalConfirmacionReserva(muestrasReservadas);
                 } catch (Exception ex) {
                     lblMensajeEstado.setForeground(Color.RED);
                     lblMensajeEstado.setText("Error al reservar muestras: " + ex.getMessage());
@@ -273,9 +284,33 @@ public class FormularioSolicitudEntrega extends JFrame {
                 lblMensajeEstado.setText(mensaje);
             }
         } catch (Exception ex) {
+            String detalle = ex.getMessage() != null && !ex.getMessage().trim().isEmpty()
+                    ? ex.getMessage().trim()
+                    : ex.getClass().getSimpleName();
             lblMensajeEstado.setForeground(Color.RED);
-            lblMensajeEstado.setText("Error de conexión con el servidor: " + ex.getMessage());
+            lblMensajeEstado.setText("Error de conexión: " + detalle);
+            mostrarModalErrorConexion(detalle);
         }
+    }
+
+    protected void mostrarAlertaConfirmacion(String mensaje) {
+        JOptionPane.showMessageDialog(
+                this,
+                mensaje,
+                "Confirmación de solicitud",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+
+    protected void mostrarModalConfirmacionReserva(List<Donacion> muestrasReservadas) {
+        ModalConfirmacionReserva modal =
+                new ModalConfirmacionReserva(this, muestrasReservadas, vistaInventario);
+        modal.setVisible(true);
+    }
+
+    public void mostrarModalErrorConexion(String detalle) {
+        ultimoModalError = new ModalErrorConexion(this, detalle);
+        ultimoModalError.setVisible(true);
     }
 
     public void limpiarFormulario() {
@@ -307,5 +342,9 @@ public class FormularioSolicitudEntrega extends JFrame {
 
     public JLabel getLblMensajeEstado() {
         return lblMensajeEstado;
+    }
+
+    public ModalErrorConexion getUltimoModalError() {
+        return ultimoModalError;
     }
 }
