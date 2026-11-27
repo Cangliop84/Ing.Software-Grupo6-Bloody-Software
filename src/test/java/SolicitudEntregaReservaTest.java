@@ -1,3 +1,8 @@
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.example.Donacion;
 import org.example.SolicitudEntregaService;
 import org.junit.jupiter.api.Test;
@@ -24,14 +29,12 @@ class SolicitudEntregaReservaTest {
         List<Donacion> tresUnidadesSeleccionadas = List.of(u1, u2, u3);
         SolicitudEntregaService service = new SolicitudEntregaService();
 
-        // Ejecuta el cambio de estado a "Reservado" sin requerir conexión real a Atlas en el test unitario
         assertDoesNotThrow(() -> service.reservarMuestrasEnMongo(tresUnidadesSeleccionadas, "HOSP-01", false));
 
         var idsReservados = tresUnidadesSeleccionadas.stream()
                 .map(Donacion::getId)
                 .collect(Collectors.toSet());
 
-        // Simula la consulta del stock general excluyendo unidades marcadas como "Reservado"
         List<Donacion> stockGeneralInicial = List.of(u1, u2, u3, u4);
         List<Donacion> stockDisponible = stockGeneralInicial.stream()
                 .filter(d -> !idsReservados.contains(d.getId()))
@@ -41,5 +44,49 @@ class SolicitudEntregaReservaTest {
         assertEquals(1, stockDisponible.size());
         assertEquals("id-4", stockDisponible.get(0).getId());
         assertFalse(stockDisponible.stream().anyMatch(d -> idsReservados.contains(d.getId())));
+    }
+
+    @Test
+    void test2_dadasUnidadesReservadasExitosamente_enBaseDeDatosIncluyeIdHospital() {
+        String uri = System.getenv("MONGODB_URI");
+        if (uri == null || uri.isBlank()) {
+            uri = System.getProperty("mongodb.uri");
+        }
+        assertNotNull(uri, "Configura MONGODB_URI o -Dmongodb.uri para ejecutar el Test 2 contra la base de datos.");
+
+        String idHospitalEsperado = "HOSP-TEST-6074";
+        SolicitudEntregaService service = new SolicitudEntregaService();
+        ObjectId idInsertado = null;
+
+        try (MongoClient client = MongoClients.create(uri)) {
+            MongoCollection<Document> donaciones = client
+                    .getDatabase("banco_sangre")
+                    .getCollection("donaciones");
+
+            Document docPrueba = new Document("nombreDonante", "Donante Test T06")
+                    .append("volumenMl", 450)
+                    .append("grupoSanguineo", "O+")
+                    .append("fechaCaducidad", LocalDate.now().plusDays(10).toString());
+            donaciones.insertOne(docPrueba);
+            idInsertado = docPrueba.getObjectId("_id");
+
+            Donacion unidad = new Donacion("Donante Test T06", 450, "O+", LocalDate.now().plusDays(10));
+            unidad.setId(idInsertado.toHexString());
+
+            service.reservarMuestrasEnMongo(List.of(unidad), idHospitalEsperado);
+
+            Document actualizado = donaciones.find(new Document("_id", idInsertado)).first();
+            assertNotNull(actualizado);
+            assertEquals("Reservado", actualizado.getString("estado"));
+            assertEquals(idHospitalEsperado, actualizado.getString("idHospital"));
+        } finally {
+            if (idInsertado != null) {
+                try (MongoClient cleanupClient = MongoClients.create(uri)) {
+                    cleanupClient.getDatabase("banco_sangre")
+                            .getCollection("donaciones")
+                            .deleteOne(new Document("_id", idInsertado));
+                }
+            }
+        }
     }
 }
