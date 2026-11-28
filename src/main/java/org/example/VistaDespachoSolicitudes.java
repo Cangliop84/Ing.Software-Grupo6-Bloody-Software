@@ -11,7 +11,13 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -22,14 +28,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Vista gráfica para el despacho de solicitudes de entrega reservadas (Sprint 02 - T11 / US05).
- * Permite seleccionar una solicitud en estado "Reservado", confirmar el despacho en un modal
- * y consumir el endpoint HTTP del backend removiendo dinámicamente la fila al confirmar éxito.
+ * Vista gráfica del panel de control de solicitudes pendientes de despacho (Sprint 02 - T10 y T11 / US05).
+ * Filtra y renderiza únicamente las solicitudes en estado "Reservado", ofrece diseño responsivo
+ * y dispone un botón de acción "Despachar" por fila para confirmar y ejecutar la entrega.
  */
 public class VistaDespachoSolicitudes extends JFrame {
     public static final String[] COLUMNAS_DESPACHO = {
-            "ID Solicitud", "Tipo Sanguíneo", "Volumen (ml)", "Estado"
+            "ID Solicitud", "Tipo Sanguíneo", "Volumen (ml)", "Estado", "Acción"
     };
+
+    private static final double[] PROPORCIONES_COLUMNAS = {0.26, 0.18, 0.18, 0.18, 0.20};
+    private static final int UMBRAL_ANCHO_COMPACTO = 580;
 
     private static final String MONGO_URI = "mongodb://rdominguez2024_db_user:Jose123@ac-15adclh-shard-00-00.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-01.ddnbvei.mongodb.net:27017,ac-15adclh-shard-00-02.ddnbvei.mongodb.net:27017/?ssl=true&replicaSet=atlas-t74n7s-shard-0&authSource=admin";
     private static final String DATABASE_NAME = "banco_sangre";
@@ -37,11 +46,19 @@ public class VistaDespachoSolicitudes extends JFrame {
     private static final Duration TIMEOUT_CONEXION = Duration.ofSeconds(3);
     private static final Duration TIMEOUT_RESPUESTA = Duration.ofSeconds(5);
 
+    private JPanel panelPrincipal;
+    private JPanel panelSuperior;
+    private JPanel panelAcciones;
+    private JLabel lblTitulo;
     private JTable tablaSolicitudes;
     private DefaultTableModel modeloTabla;
+    private TableRowSorter<DefaultTableModel> sorter;
+    private JScrollPane scrollPane;
     private JButton btnDespachar;
     private JButton btnActualizar;
     private JLabel lblMensajeEstado;
+    private boolean modoCompactoActivo = false;
+
     private String urlEndpointDespacho;
     private final HttpClient httpClient;
     private final TablaInventario vistaInventario;
@@ -64,28 +81,29 @@ public class VistaDespachoSolicitudes extends JFrame {
                 .connectTimeout(TIMEOUT_CONEXION)
                 .build();
 
-        setTitle("Despacho de Solicitudes - Banco de Sangre Bloody");
-        setSize(720, 420);
-        setMinimumSize(new Dimension(520, 320));
+        setTitle("Panel de Solicitudes Pendientes - Banco de Sangre Bloody");
+        setSize(760, 440);
+        setMinimumSize(new Dimension(480, 320));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
         inicializarComponentes();
         configurarEstilosTabla();
+        configurarDisenoResponsivo();
         configurarEventos();
     }
 
     private void inicializarComponentes() {
-        JPanel panelPrincipal = new JPanel(new BorderLayout(12, 12));
+        panelPrincipal = new JPanel(new BorderLayout(12, 12));
         panelPrincipal.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
         // Panel superior: Título y botones de acción
-        JPanel panelSuperior = new JPanel(new BorderLayout(10, 10));
-        JLabel lblTitulo = new JLabel("Solicitudes Reservadas Listas para Despacho", SwingConstants.LEFT);
+        panelSuperior = new JPanel(new BorderLayout(10, 10));
+        lblTitulo = new JLabel("Solicitudes Reservadas Listas para Despacho", SwingConstants.LEFT);
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 16));
         panelSuperior.add(lblTitulo, BorderLayout.WEST);
 
-        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        panelAcciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnActualizar = new JButton("Actualizar");
         btnActualizar.setPreferredSize(new Dimension(105, 30));
 
@@ -99,23 +117,28 @@ public class VistaDespachoSolicitudes extends JFrame {
 
         panelPrincipal.add(panelSuperior, BorderLayout.NORTH);
 
-        // Panel central: Tabla de solicitudes reservadas
+        // Panel central: Tabla responsiva filtrada únicamente por estado "Reservado"
         modeloTabla = new DefaultTableModel(COLUMNAS_DESPACHO, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false;
+                return column == 4;
             }
         };
 
         tablaSolicitudes = new JTable(modeloTabla);
-        tablaSolicitudes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        tablaSolicitudes.setRowHeight(28);
-        tablaSolicitudes.setFillsViewportHeight(true);
+        sorter = new TableRowSorter<>(modeloTabla);
+        sorter.setRowFilter(RowFilter.regexFilter("(?i)^Reservado$", 3));
+        tablaSolicitudes.setRowSorter(sorter);
 
-        JScrollPane scrollPane = new JScrollPane(tablaSolicitudes);
+        tablaSolicitudes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tablaSolicitudes.setRowHeight(32);
+        tablaSolicitudes.setFillsViewportHeight(true);
+        tablaSolicitudes.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+
+        scrollPane = new JScrollPane(tablaSolicitudes);
         panelPrincipal.add(scrollPane, BorderLayout.CENTER);
 
-        // Panel inferior: Mensaje de confirmación visual o alerta (CA3)
+        // Panel inferior: Mensaje de estado
         JPanel panelInferior = new JPanel(new BorderLayout());
         lblMensajeEstado = new JLabel("Seleccione una solicitud en estado 'Reservado' para despachar.", SwingConstants.LEFT);
         lblMensajeEstado.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -135,11 +158,125 @@ public class VistaDespachoSolicitudes extends JFrame {
         header.setPreferredSize(new Dimension(header.getPreferredSize().width, 32));
         header.setReorderingAllowed(false);
 
-        DefaultTableCellRenderer centrarRenderer = new DefaultTableCellRenderer();
-        centrarRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        for (int i = 0; i < tablaSolicitudes.getColumnCount(); i++) {
+        tablaSolicitudes.setSelectionBackground(new Color(235, 200, 200));
+        tablaSolicitudes.setSelectionForeground(Color.BLACK);
+        tablaSolicitudes.setGridColor(new Color(220, 220, 220));
+        tablaSolicitudes.setShowGrid(true);
+
+        DefaultTableCellRenderer centrarRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 245, 245));
+                }
+                setHorizontalAlignment(SwingConstants.CENTER);
+                return c;
+            }
+        };
+
+        for (int i = 0; i < tablaSolicitudes.getColumnCount() - 1; i++) {
             tablaSolicitudes.getColumnModel().getColumn(i).setCellRenderer(centrarRenderer);
         }
+
+        // Renderizador y editor para el botón de acción "Despachar" en cada fila
+        TableColumn columnaAccion = tablaSolicitudes.getColumnModel().getColumn(4);
+        columnaAccion.setCellRenderer(new BotonDespacharRenderer());
+        columnaAccion.setCellEditor(new BotonDespacharEditor());
+    }
+
+    private void configurarDisenoResponsivo() {
+        ajustarVistaSegunResolucion();
+
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                ajustarVistaSegunResolucion();
+            }
+        });
+    }
+
+    private void ajustarVistaSegunResolucion() {
+        ajustarLayoutPanelSuperior(getWidth());
+        ajustarColumnasProporcionalmente();
+        revalidate();
+        repaint();
+    }
+
+    public void ajustarLayoutPanelSuperior(int anchoVentana) {
+        boolean requiereModoCompacto = anchoVentana > 0 && anchoVentana < UMBRAL_ANCHO_COMPACTO;
+        if (requiereModoCompacto == modoCompactoActivo) {
+            return;
+        }
+
+        modoCompactoActivo = requiereModoCompacto;
+        panelSuperior.removeAll();
+
+        if (modoCompactoActivo) {
+            panelSuperior.setLayout(new GridLayout(2, 1, 4, 6));
+            lblTitulo.setHorizontalAlignment(SwingConstants.CENTER);
+            panelAcciones.setLayout(new FlowLayout(FlowLayout.CENTER, 6, 0));
+            panelSuperior.add(lblTitulo);
+            panelSuperior.add(panelAcciones);
+        } else {
+            panelSuperior.setLayout(new BorderLayout(10, 10));
+            lblTitulo.setHorizontalAlignment(SwingConstants.LEFT);
+            panelAcciones.setLayout(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            panelSuperior.add(lblTitulo, BorderLayout.WEST);
+            panelSuperior.add(panelAcciones, BorderLayout.EAST);
+        }
+
+        panelSuperior.revalidate();
+    }
+
+    public void ajustarColumnasProporcionalmente() {
+        int anchoDisponible = scrollPane.getViewport().getWidth();
+        if (anchoDisponible <= 0) {
+            anchoDisponible = getWidth() - 50;
+        }
+        if (anchoDisponible <= 0) {
+            return;
+        }
+
+        TableColumnModel columnModel = tablaSolicitudes.getColumnModel();
+        for (int i = 0; i < columnModel.getColumnCount() && i < PROPORCIONES_COLUMNAS.length; i++) {
+            TableColumn columna = columnModel.getColumn(i);
+            int anchoColumna = (int) Math.round(anchoDisponible * PROPORCIONES_COLUMNAS[i]);
+            columna.setPreferredWidth(Math.max(anchoColumna, 75));
+            columna.setMinWidth(65);
+        }
+    }
+
+    public void cambiarResolucion(int ancho, int alto) {
+        setSize(ancho, alto);
+        ajustarLayoutPanelSuperior(ancho);
+        doLayout();
+        panelPrincipal.doLayout();
+        panelSuperior.doLayout();
+        scrollPane.doLayout();
+        ajustarColumnasProporcionalmente();
+    }
+
+    public boolean esEstructuraResponsivaValida() {
+        if (getWidth() <= 0 || getHeight() <= 0) {
+            return false;
+        }
+        boolean tablaVisible = tablaSolicitudes.getColumnCount() == COLUMNAS_DESPACHO.length;
+        boolean sinDesbordeHorizontal = scrollPane.getWidth() <= panelPrincipal.getWidth()
+                && panelSuperior.getWidth() <= panelPrincipal.getWidth();
+        boolean columnasConAnchoMinimo = true;
+
+        TableColumnModel columnModel = tablaSolicitudes.getColumnModel();
+        for (int i = 0; i < columnModel.getColumnCount(); i++) {
+            if (columnModel.getColumn(i).getWidth() < 0 || columnModel.getColumn(i).getPreferredWidth() < 65) {
+                columnasConAnchoMinimo = false;
+                break;
+            }
+        }
+
+        return tablaVisible && sinDesbordeHorizontal && columnasConAnchoMinimo;
     }
 
     private void configurarEventos() {
@@ -203,11 +340,7 @@ public class VistaDespachoSolicitudes extends JFrame {
 
     /**
      * Envía la petición HTTP POST al endpoint de despacho y, si es exitosa,
-     * remueve dinámicamente la fila de la tabla y emite la confirmación visual (CA3).
-     *
-     * @param filaModelo  Índice de la fila en el modelo de tabla.
-     * @param idSolicitud Identificador de la solicitud a despachar.
-     * @return true si el backend confirmó el despacho exitosamente; false en caso de error.
+     * remueve dinámicamente la fila de la tabla y emite la confirmación visual.
      */
     public boolean ejecutarDespachoHttp(int filaModelo, String idSolicitud) {
         String payload = new Document("idSolicitud", idSolicitud).toJson();
@@ -295,7 +428,8 @@ public class VistaDespachoSolicitudes extends JFrame {
                             id,
                             tipo != null ? tipo : "-",
                             volumen != null ? volumen : 0,
-                            estado != null ? estado : "Reservado"
+                            estado != null ? estado : "Reservado",
+                            "Despachar"
                     });
                 }
 
@@ -306,7 +440,7 @@ public class VistaDespachoSolicitudes extends JFrame {
                     }
                     actualizarEstadoBotonDespachar();
                     lblMensajeEstado.setForeground(new Color(70, 70, 70));
-                    lblMensajeEstado.setText("Solicitudes reservadas cargadas: " + filas.size());
+                    lblMensajeEstado.setText("Solicitudes reservadas cargadas: " + tablaSolicitudes.getRowCount());
                 });
             } catch (Exception ex) {
                 SwingUtilities.invokeLater(() -> {
@@ -318,17 +452,90 @@ public class VistaDespachoSolicitudes extends JFrame {
     }
 
     public void agregarSolicitudEnTabla(String idSolicitud, String tipoSangre, int volumenMl, String estado) {
-        modeloTabla.addRow(new Object[]{idSolicitud, tipoSangre, volumenMl, estado});
+        modeloTabla.addRow(new Object[]{idSolicitud, tipoSangre, volumenMl, estado, "Despachar"});
     }
 
     public void cargarSolicitudes(List<Object[]> filas) {
         modeloTabla.setRowCount(0);
         if (filas != null) {
             for (Object[] fila : filas) {
-                modeloTabla.addRow(fila);
+                if (fila != null && fila.length >= 4) {
+                    String accion = (fila.length >= 5 && fila[4] != null) ? fila[4].toString() : "Despachar";
+                    modeloTabla.addRow(new Object[]{fila[0], fila[1], fila[2], fila[3], accion});
+                }
             }
         }
         actualizarEstadoBotonDespachar();
+    }
+
+    /**
+     * Renderizador que dibuja el botón "Despachar" en la columna de acción de cada fila.
+     */
+    private static class BotonDespacharRenderer extends JButton implements TableCellRenderer {
+        public BotonDespacharRenderer() {
+            setOpaque(true);
+            setFont(new Font("SansSerif", Font.BOLD, 12));
+            setBackground(new Color(180, 35, 35));
+            setForeground(Color.WHITE);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus,
+                                                       int row, int column) {
+            setText(value != null ? value.toString() : "Despachar");
+            return this;
+        }
+    }
+
+    /**
+     * Editor de celda que permite presionar el botón "Despachar" directamente sobre una fila.
+     */
+    private class BotonDespacharEditor extends DefaultCellEditor {
+        private final JButton boton;
+        private String etiqueta;
+        private int filaActual = -1;
+
+        public BotonDespacharEditor() {
+            super(new JCheckBox());
+            boton = new JButton("Despachar");
+            boton.setOpaque(true);
+            boton.setFont(new Font("SansSerif", Font.BOLD, 12));
+            boton.setBackground(new Color(180, 35, 35));
+            boton.setForeground(Color.WHITE);
+            boton.addActionListener(e -> fireEditingStopped());
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                                                     boolean isSelected, int row, int column) {
+            etiqueta = value != null ? value.toString() : "Despachar";
+            boton.setText(etiqueta);
+            filaActual = row;
+            return boton;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            if (filaActual >= 0 && filaActual < tablaSolicitudes.getRowCount()) {
+                int filaSeleccionar = filaActual;
+                SwingUtilities.invokeLater(() -> {
+                    if (filaSeleccionar < tablaSolicitudes.getRowCount()) {
+                        tablaSolicitudes.setRowSelectionInterval(filaSeleccionar, filaSeleccionar);
+                        iniciarFlujoDespacho();
+                    }
+                });
+            }
+            return etiqueta;
+        }
+    }
+
+    public boolean isModoCompactoActivo() {
+        return modoCompactoActivo;
+    }
+
+    public TableRowSorter<DefaultTableModel> getSorter() {
+        return sorter;
     }
 
     public ModalConfirmacionDespacho getUltimoModalConfirmacion() {
